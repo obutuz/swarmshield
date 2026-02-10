@@ -11,4 +11,5 @@
 # - No direct Repo in LiveViews
 # - PubSub for real-time updates
 # ---
-AUTH-001 DONE 2026-02-10 Run mix phx.gen.auth with binary_id - 111 tests pass, credo clean
+AUTH-001 DONE 2026-02-10 Run mix phx.gen.auth with binary_id - 112 tests pass, credo clean
+AUTH-003 DONE 2026-02-10 Create Workspace schema and migration - 132 tests pass, credo clean

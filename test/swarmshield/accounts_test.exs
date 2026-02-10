@@ -280,6 +280,24 @@ defmodule Swarmshield.AccountsTest do
       assert user_token.authenticated_at == user.authenticated_at
       assert DateTime.compare(user_token.inserted_at, user.authenticated_at) == :gt
     end
+
+    test "concurrent sessions are independent", %{user: user} do
+      token1 = Accounts.generate_user_session_token(user)
+      token2 = Accounts.generate_user_session_token(user)
+      assert token1 != token2
+
+      # Both tokens resolve to the same user independently
+      assert {session_user1, _} = Accounts.get_user_by_session_token(token1)
+      assert {session_user2, _} = Accounts.get_user_by_session_token(token2)
+      assert session_user1.id == user.id
+      assert session_user2.id == user.id
+
+      # Deleting one token does not affect the other
+      Accounts.delete_user_session_token(token1)
+      refute Accounts.get_user_by_session_token(token1)
+      assert {remaining_user, _} = Accounts.get_user_by_session_token(token2)
+      assert remaining_user.id == user.id
+    end
   end
 
   describe "get_user_by_session_token/1" do

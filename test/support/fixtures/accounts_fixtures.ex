@@ -8,6 +8,8 @@ defmodule Swarmshield.AccountsFixtures do
 
   alias Swarmshield.Accounts
   alias Swarmshield.Accounts.Scope
+  alias Swarmshield.Accounts.Workspace
+  alias Swarmshield.Repo
 
   def unique_user_email, do: "user#{System.unique_integer()}@example.com"
   def valid_user_password, do: "hello world!"
@@ -85,5 +87,27 @@ defmodule Swarmshield.AccountsFixtures do
       from(ut in Accounts.UserToken, where: ut.token == ^token),
       set: [inserted_at: dt, authenticated_at: dt]
     )
+  end
+
+  def unique_workspace_slug, do: "workspace-#{System.unique_integer([:positive])}"
+
+  def valid_workspace_attributes(attrs \\ %{}) do
+    slug = unique_workspace_slug()
+
+    Enum.into(attrs, %{
+      name: "Workspace #{slug}",
+      slug: slug,
+      description: "A test workspace"
+    })
+  end
+
+  def workspace_fixture(attrs \\ %{}) do
+    {:ok, workspace} =
+      attrs
+      |> valid_workspace_attributes()
+      |> then(&Workspace.changeset(%Workspace{}, &1))
+      |> Repo.insert()
+
+    workspace
   end
 end
