@@ -40,6 +40,9 @@ defmodule Swarmshield.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:tidewave, "~> 0.5", only: [:dev]},
+      {:usage_rules, "~> 1.0"},
+      {:igniter, "~> 0.7.2"},
       {:phoenix, "~> 1.8.3"},
       {:phoenix_ecto, "~> 4.5"},
       {:ecto_sql, "~> 3.13"},
@@ -65,7 +68,10 @@ defmodule Swarmshield.MixProject do
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
-      {:bandit, "~> 1.5"}
+      {:bandit, "~> 1.5"},
+      {:req_llm, "~> 1.5"},
+      {:credo, "~> 1.7"},
+      {:dialyxir, "~> 1.4"}
     ]
   end
 

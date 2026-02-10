@@ -1,0 +1,275 @@
+{
+  "branchName": "ralph/phase-4-gateway",
+  "description": "REST API gateway for external AI agents to submit events. Authenticates via Bearer token, evaluates against policy engine, broadcasts via PubSub, and auto-triggers deliberation on flagged events.",
+  "phase": 4,
+  "phaseName": "API Gateway",
+  "crossPhaseLinks": {
+    "phase_1_auth_foundation": "ApiAuth plug resolves workspace from API key hash.",
+    "phase_2_core_schemas": "Creates AgentEvent records, references RegisteredAgent.",
+    "phase_3_policy_engine": "EventController calls PolicyEngine.evaluate/2 on each event.",
+    "phase_5_deliberation_engine": "Auto-triggers deliberation on flagged/blocked events via PubSub.",
+    "phase_6_dashboard_liveviews": "PubSub broadcasts update real-time dashboard counters.",
+    "phase_8_demo_polish": "Simulator POSTs events to this API."
+  },
+  "securityRules": {
+    "api_auth": "Bearer token validated via SHA256 hash-then-lookup. Failed auth attempts logged to audit_entry. Generic error messages (no agent existence leakage).",
+    "rate_limiting": "API pipeline includes rate limiting plug. Auth failure rate limiting per IP for brute-force protection.",
+    "input_validation": "Content-Type validated as application/json. Request body size limited. Params explicitly extracted (Map.take), never raw pass-through.",
+    "csrf": "Browser pipeline includes :protect_from_forgery. API pipeline uses Bearer token (no CSRF needed for token auth).",
+    "information_leakage": "Error responses never differentiate agent-not-found vs invalid-token. Health endpoint exposes only status and version. Evaluation results strip sensitive rule config.",
+    "pubsub_security": "PubSub broadcast payloads never include api_key_hash, raw rule configs, or detection patterns. Topics workspace-scoped.",
+    "audit_trail": "Event creation, blocked/flagged decisions, auth failures, and deliberation triggers all create audit_entry records."
+  },
+  "userStories": [
+    {
+      "id": "GW-001",
+      "title": "Create ApiAuth plug",
+      "description": "Plug that authenticates API requests using Bearer tokens. Extracts token from Authorization header, hashes it with SHA256, looks up the RegisteredAgent, and assigns the agent and workspace to the connection.",
+      "priority": 1,
+      "passes": false,
+      "dependsOn": [],
+      "acceptanceCriteria": [
+        "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
+        "Plug at lib/swarmshield_web/plugs/api_auth.ex",
+        "Implements Plug behaviour (init/1, call/2)",
+        "Extracts Bearer token from Authorization header",
+        "Hashes token with :crypto.hash(:sha256, token) |> Base.encode16(case: :lower)",
+        "Looks up RegisteredAgent by api_key_hash via Gateway context",
+        "On success: assigns :current_agent and :current_workspace to conn",
+        "On failure (missing header): returns 401 with JSON error",
+        "On failure (invalid token): returns 401 with JSON error",
+        "On failure (suspended agent): returns 403 with JSON error",
+        "Updates RegisteredAgent.last_seen_at on successful auth",
+        "Pattern matching for all error cases",
+        "Tests for valid token, missing header, invalid token, suspended agent",
+        "Edge case: empty Authorization header returns 401",
+        "Edge case: Authorization header without 'Bearer ' prefix returns 401",
+        "Edge case: Bearer token with extra whitespace handled correctly",
+        "Edge case: revoked agent (status: :revoked) returns 403 with 'agent_revoked' error",
+        "Edge case: agent in archived workspace returns 403",
+        "Edge case: concurrent auth requests don't cause race conditions on last_seen_at update",
+        "Minimum 10 test cases",
+        "SECURITY: Error responses must NOT differentiate 'agent not found' vs 'invalid token' - use generic 'invalid credentials' for all auth failures to prevent enumeration",
+        "SECURITY: Failed auth attempts must create audit_entry records with source IP and token prefix (NOT full token)",
+        "SECURITY: last_seen_at update must be async or batched - synchronous update on every request creates write contention at 20M users",
+        "mix format passes",
+        "mix credo --strict passes",
+        "mix test passes"
+      ]
+    },
+    {
+      "id": "GW-002",
+      "title": "Create API pipeline in router.ex",
+      "description": "Add API pipeline to Phoenix router with JSON content type, API authentication, and versioned routing scope.",
+      "priority": 2,
+      "passes": false,
+      "dependsOn": [
+        "GW-001"
+      ],
+      "acceptanceCriteria": [
+        "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
+        "Update lib/swarmshield_web/router.ex",
+        "Add :api pipeline with plugs: :accepts ['json'], ApiAuth plug",
+        "Add scope '/api/v1' with :api pipeline",
+        "Separate unauthenticated API scope for health check",
+        "No CSRF protection in API pipeline (stateless auth)",
+        "Tests verify pipeline is wired correctly",
+        "Edge case: API routes accept application/json content type only",
+        "Edge case: non-JSON content type returns 415 Unsupported Media Type",
+        "Edge case: unauthenticated scope does NOT require ApiAuth plug",
+        "Router compiles without warnings",
+        "SECURITY: API pipeline must include rate limiting plug (e.g., Hammer or PlugAttack) to prevent DoS",
+        "SECURITY: API pipeline must set X-Content-Type-Options: nosniff header",
+        "SECURITY: API pipeline must include explicit request body size limit (Plug.Parsers :length option)",
+        "SECURITY: CORS configuration must be explicitly defined for the API scope",
+        "mix format passes",
+        "mix credo --strict passes",
+        "mix test passes"
+      ]
+    },
+    {
+      "id": "GW-003",
+      "title": "Create EventController",
+      "description": "Controller handling POST /api/v1/events. Receives event data from external AI agents, validates input, creates AgentEvent record, and returns the created event.",
+      "priority": 3,
+      "passes": false,
+      "dependsOn": [
+        "GW-002"
+      ],
+      "acceptanceCriteria": [
+        "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
+        "Controller at lib/swarmshield_web/controllers/api/v1/event_controller.ex",
+        "create/2 action: POST /api/v1/events",
+        "Extracts event params from request body",
+        "Adds workspace_id and registered_agent_id from conn assigns",
+        "Creates AgentEvent via Gateway context",
+        "Returns 201 with created event JSON on success",
+        "Returns 422 with changeset errors on validation failure",
+        "Pattern matching for success/error in action",
+        "Route added to router: post '/events', EventController, :create",
+        "Tests for successful creation, validation errors, missing fields",
+        "Edge case: malformed JSON body returns 400 Bad Request",
+        "Edge case: missing required fields returns 422 with specific field errors",
+        "Edge case: extra unknown fields in body are ignored (not stored)",
+        "Edge case: extremely large content field (>1MB) handled by payload size limits",
+        "Edge case: concurrent event creation from same agent doesn't cause race conditions",
+        "Edge case: event_type must be a valid enum value",
+        "Minimum 10 test cases",
+        "SECURITY: Must validate Content-Type header is application/json - return 415 Unsupported Media Type if not",
+        "SECURITY: source_ip must be extracted from conn.remote_ip (or X-Forwarded-For behind proxy) - NEVER from request body",
+        "SECURITY: Input must use explicit param extraction (Map.take on known keys) - never pass raw params to context function",
+        "SECURITY: Event creation must create audit_entry with agent_id, workspace_id, and resulting status",
+        "mix format passes",
+        "mix credo --strict passes",
+        "mix test passes"
+      ]
+    },
+    {
+      "id": "GW-004",
+      "title": "Create EventJSON view module",
+      "description": "JSON view module for rendering AgentEvent responses. Follows Phoenix 1.8 JSON view conventions.",
+      "priority": 4,
+      "passes": false,
+      "dependsOn": [
+        "GW-003"
+      ],
+      "acceptanceCriteria": [
+        "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
+        "View at lib/swarmshield_web/controllers/api/v1/event_json.ex",
+        "index/1 renders list of events",
+        "show/1 renders single event with all fields",
+        "Renders: id, event_type, content, status, severity, evaluation_result, registered_agent_id, inserted_at",
+        "Does NOT expose internal fields (workspace_id, payload raw data)",
+        "Pattern matching for render functions",
+        "Tests for JSON output format",
+        "Edge case: nil evaluation_result rendered as null in JSON",
+        "Edge case: datetime fields rendered as ISO 8601 strings",
+        "Edge case: internal fields (workspace_id) NOT exposed in response",
+        "SECURITY: EventJSON must NEVER expose api_key_hash, api_key_prefix, or any credential-related fields in responses",
+        "mix format passes",
+        "mix credo --strict passes",
+        "mix test passes"
+      ]
+    },
+    {
+      "id": "GW-005",
+      "title": "Wire PolicyEngine into EventController flow",
+      "description": "After creating an AgentEvent, run it through PolicyEngine.evaluate/2 and update the event status based on the evaluation result. Create PolicyViolation records for flagged/blocked events.",
+      "priority": 5,
+      "passes": false,
+      "dependsOn": [
+        "GW-003"
+      ],
+      "acceptanceCriteria": [
+        "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
+        "MANDATORY: PolicyEngine reads rules from database-backed ETS cache - ZERO hardcoded policy decisions in controller",
+        "Update EventController.create/2 to call PolicyEngine after event creation",
+        "Flow: create event (status: :pending) -> evaluate -> update status to :allowed/:flagged/:blocked",
+        "On :flag or :block: create PolicyViolation record via Policies context",
+        "Store evaluation_result map on the AgentEvent",
+        "Response includes evaluation status and matched rules",
+        "Evaluation runs synchronously (sub-ms from ETS cache)",
+        "Tests for allowed event, flagged event, blocked event",
+        "Edge case: PolicyEngine unavailable (ETS table gone) - event created with status :pending, no crash",
+        "Edge case: PolicyViolation creation failure doesn't prevent event from being saved",
+        "Edge case: evaluation_result map includes rule names, types, and actions for transparency",
+        "Edge case: response time still under 100ms even with 50+ active rules (ETS is fast)",
+        "Minimum 8 test cases",
+        "SECURITY: PolicyEngine evaluation failure must be handled with try/rescue - event saved as :pending on error, NEVER return 500",
+        "SECURITY: evaluation_result stored on AgentEvent must NOT contain full rule configs or detection patterns - only rule name, type, action, match indicator",
+        "mix format passes",
+        "mix credo --strict passes",
+        "mix test passes"
+      ]
+    },
+    {
+      "id": "GW-006",
+      "title": "PubSub broadcast on event ingestion",
+      "description": "Broadcast PubSub events when agent events are ingested and evaluated. Dashboard LiveViews subscribe to these for real-time updates.",
+      "priority": 6,
+      "passes": false,
+      "dependsOn": [
+        "GW-005"
+      ],
+      "acceptanceCriteria": [
+        "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
+        "Broadcast after event creation + evaluation in Gateway context",
+        "Topic: 'events:workspace_id'",
+        "Message: {:event_created, event} with preloaded registered_agent",
+        "Topic: 'violations:workspace_id' for flagged/blocked events",
+        "Message: {:violation_created, violation} with preloaded event and rule",
+        "PubSub server: Swarmshield.PubSub (already configured)",
+        "Tests verify PubSub messages are broadcast",
+        "Edge case: PubSub broadcast failure doesn't crash event creation",
+        "Edge case: broadcast includes preloaded registered_agent (not just ID)",
+        "Edge case: violation broadcast includes preloaded event AND rule",
+        "Edge case: no broadcast on :allowed events (only :flagged/:blocked)",
+        "mix format passes",
+        "mix credo --strict passes",
+        "mix test passes"
+      ]
+    },
+    {
+      "id": "GW-007",
+      "title": "Auto-trigger deliberation on flagged events",
+      "description": "When an event is flagged (not blocked), automatically trigger a deliberation session if a matching workflow exists. This connects the gateway to the deliberation engine.",
+      "priority": 7,
+      "passes": false,
+      "dependsOn": [
+        "GW-006"
+      ],
+      "acceptanceCriteria": [
+        "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
+        "MANDATORY: Workflow trigger matching reads enabled workflows from database - ZERO hardcoded trigger conditions",
+        "Add deliberation trigger logic after event evaluation",
+        "Only triggers on :flagged status (blocked events don't need deliberation)",
+        "Checks for enabled workflow with matching trigger_on condition in workspace",
+        "Publishes {:trigger_deliberation, event, workflow} to 'deliberations:workspace_id' topic",
+        "Does NOT block the API response - deliberation runs asynchronously",
+        "If no matching workflow, event stays flagged without deliberation",
+        "Tests for auto-trigger with matching workflow, no trigger without workflow",
+        "Edge case: no workflow configured - event stays :flagged, no deliberation",
+        "Edge case: multiple matching workflows - only first (highest priority) triggers",
+        "Edge case: disabled workflow not selected even if trigger matches",
+        "Edge case: deliberation trigger is async - API response doesn't wait for deliberation",
+        "Edge case: deliberation trigger failure is logged but doesn't affect event response",
+        "SECURITY: Async deliberation trigger must use Task.Supervisor (supervised) - not bare Task.async which crashes caller on failure",
+        "SECURITY: Deliberation trigger must create audit_entry record (automated security decisions must be traceable)",
+        "mix format passes",
+        "mix credo --strict passes",
+        "mix test passes"
+      ]
+    },
+    {
+      "id": "GW-008",
+      "title": "Create HealthController",
+      "description": "Simple health check endpoint for load balancers and monitoring. No authentication required.",
+      "priority": 8,
+      "passes": false,
+      "dependsOn": [
+        "GW-002"
+      ],
+      "acceptanceCriteria": [
+        "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
+        "Controller at lib/swarmshield_web/controllers/api/v1/health_controller.ex",
+        "index/2 action: GET /api/v1/health",
+        "Returns 200 with JSON: {status: 'ok', version: '0.1.0', timestamp: utc_now}",
+        "Checks database connectivity: Ecto.Adapters.SQL.query(Repo, 'SELECT 1')",
+        "Returns 503 if database is unreachable",
+        "Route in unauthenticated API scope (no ApiAuth plug)",
+        "Tests for healthy and unhealthy states",
+        "Edge case: returns 503 with JSON error when database is unreachable",
+        "Edge case: health check does NOT require authentication",
+        "Edge case: response includes app version from Mix.Project config",
+        "Edge case: response timestamp is valid ISO 8601 UTC",
+        "Minimum 4 test cases",
+        "SECURITY: Health endpoint must NOT expose Elixir version, OTP version, internal IPs, or database version - only status and app version",
+        "SECURITY: Must use Application.spec(:swarmshield, :vsn) NOT Mix.Project (Mix unavailable in production releases)",
+        "SECURITY: Database check must use query timeout (5 seconds) to prevent hanging health checks",
+        "mix format passes",
+        "mix credo --strict passes",
+        "mix test passes"
+      ]
+    }
+  ]
+}

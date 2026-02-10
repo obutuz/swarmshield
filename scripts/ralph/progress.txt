@@ -1,0 +1,13 @@
+# SwarmShield - Ralph Build Progress
+# This file is updated by Ralph after each iteration.
+# Format: [STORY-ID] [STATUS] [TIMESTAMP] [NOTES]
+# ---
+# Patterns established:
+# - App: Swarmshield / SwarmshieldWeb
+# - Binary IDs: @primary_key {:id, :binary_id, autogenerate: true}
+# - Timestamps: timestamps(type: :utc_datetime)
+# - All enums via Ecto.Enum
+# - ETS caches: try/rescue in handle_continue
+# - No direct Repo in LiveViews
+# - PubSub for real-time updates
+# ---

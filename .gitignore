@@ -21,6 +21,8 @@ erl_crash.dump
 
 # Temporary files, for example, from tests.
 /tmp/
+/docs/
+/doc/
 
 # Ignore package tarball (built via "mix hex.build").
 swarmshield-*.tar
@@ -34,4 +36,3 @@ swarmshield-*.tar
 # In case you use Node.js/npm, you want to ignore these.
 npm-debug.log
 /assets/node_modules/
-

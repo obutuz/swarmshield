@@ -1,0 +1,457 @@
+{
+  "branchName": "ralph/phase-1-auth",
+  "description": "Foundation that everything else depends on. Authentication via phx.gen.auth, database-driven RBAC, workspaces, onboarding, and audit logging.",
+  "phase": 1,
+  "phaseName": "Auth Foundation",
+  "crossPhaseLinks": {
+    "phase_2_core_schemas": "All domain schemas belong_to workspace. RegisteredAgent, AgentEvent, PolicyRule, etc. are workspace-scoped.",
+    "phase_3_policy_engine": "PolicyCache loads rules per workspace. PolicyEngine evaluates within workspace scope.",
+    "phase_4_api_gateway": "ApiAuth plug authenticates registered agents by workspace API key. Events scoped to workspace.",
+    "phase_5_deliberation_engine": "Deliberation sessions scoped to workspace. Audit entries created for all deliberation actions.",
+    "phase_6_dashboard_liveviews": "LiveView on_mount hooks enforce workspace scope and role-based permissions.",
+    "phase_7_admin_liveviews": "Admin views restricted by has_permission?/3 checks. Role assignment UI.",
+    "phase_8_demo_polish": "Demo seeder creates sample workspace, users with roles."
+  },
+  "securityRules": {
+    "csrf": "Browser pipeline includes :protect_from_forgery and :put_secure_browser_headers. All state-changing actions use POST.",
+    "session_security": "Session tokens hashed before storage. Sessions invalidated on password change/logout. Workspace ID in session re-validated per request.",
+    "mass_assignment": "All changesets use explicit cast/3 with ONLY permitted fields. NEVER cast workspace_id, api_key_hash, is_system from user input.",
+    "authorization": "on_mount hooks verify auth on BOTH mount AND handle_event. Permission checks on every state-changing action.",
+    "api_key_security": "API keys generated with :crypto.strong_rand_bytes(32), stored as SHA256 hash only. Raw key shown once, never stored.",
+    "audit_trail": "All security-critical actions (role changes, permission changes, workspace switches, auth failures) create audit_entry records.",
+    "input_validation": "All user input validated via Ecto changesets. workspace_id from server-side assigns, never URL params or user input."
+  },
+  "userStories": [
+    {
+      "id": "AUTH-001",
+      "title": "Run mix phx.gen.auth with binary_id",
+      "description": "Generate the authentication system using phx.gen.auth. This provides user registration, login, logout, email confirmation, and password reset. Must use binary_id for all primary keys.",
+      "priority": 1,
+      "passes": false,
+      "dependsOn": [],
+      "acceptanceCriteria": [
+        "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
+        "Run: mix phx.gen.auth Accounts User users",
+        "Verify User schema uses @primary_key {:id, :binary_id, autogenerate: true}",
+        "Verify UserToken schema uses binary_id",
+        "Verify migration uses binary_id primary keys",
+        "Verify generators config has binary_id: true in config.exs",
+        "All generated tests pass",
+        "Login, registration, and logout flows work",
+        "Create test fixture factory at test/support/fixtures/accounts_fixtures.ex with user_fixture/1 that creates a user with unique email",
+        "Edge case: test registration with duplicate email returns changeset error",
+        "Edge case: test login with wrong password returns error",
+        "Edge case: test session token expiry",
+        "Edge case: test concurrent login sessions are independent",
+        "Ensure router.ex has auth routes wired (generated automatically but verify)",
+        "mix format passes",
+        "mix credo --strict passes",
+        "mix test passes"
+      ]
+    },
+    {
+      "id": "AUTH-003",
+      "title": "Create Workspace schema and migration",
+      "description": "Workspace is the top-level isolation boundary in SwarmShield. All domain entities (agents, events, policies, deliberations) are scoped to a workspace. Users can belong to multiple workspaces with different roles.",
+      "priority": 3,
+      "passes": false,
+      "dependsOn": [
+        "AUTH-001"
+      ],
+      "acceptanceCriteria": [
+        "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
+        "MANDATORY: All workspace settings stored in database settings map - ZERO hardcoded configuration values",
+        "Schema at lib/swarmshield/accounts/workspace.ex",
+        "Uses @primary_key {:id, :binary_id, autogenerate: true}",
+        "Workspace is the top-level entity (no parent hierarchy)",
+        "Fields: name (string, required), slug (string, globally unique), description (string), api_key_hash (string), status (Ecto.Enum :active/:suspended/:archived), settings (map, default %{})",
+        "Changeset validates required [:name, :slug]",
+        "Unique constraint on [:slug] (globally unique)",
+        "Migration is idempotent",
+        "Edge case: test same slug rejected (globally unique constraint)",
+        "Edge case: test workspace cannot be created with empty name",
+        "Edge case: test status transitions (active -> suspended -> archived)",
+        "Add workspace_fixture/1 to test/support/fixtures/accounts_fixtures.ex",
+        "Tests for valid/invalid changesets, unique constraint on slug",
+        "SECURITY: Changeset must use explicit cast/3 with only [:name, :slug, :description, :status, :settings] - NEVER include [:api_key_hash] in user-facing changeset. Separate internal changeset for api_key_hash",
+        "mix format passes",
+        "mix credo --strict passes",
+        "mix test passes"
+      ]
+    },
+    {
+      "id": "AUTH-004",
+      "title": "Create Role schema with database-driven permissions",
+      "description": "Role defines a named set of permissions. Roles are NOT hardcoded - they are database records. Default roles (super_admin, admin, analyst, viewer) are seeded but can be customized per workspace.",
+      "priority": 4,
+      "passes": false,
+      "dependsOn": [
+        "AUTH-001"
+      ],
+      "acceptanceCriteria": [
+        "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
+        "MANDATORY: Roles are database records - ZERO hardcoded role names in application code. All role checks query the database via context functions",
+        "Schema at lib/swarmshield/accounts/role.ex",
+        "Uses @primary_key {:id, :binary_id, autogenerate: true}",
+        "Fields: name (string, required, unique), description (string), is_system (boolean, default false - marks default roles that cannot be deleted)",
+        "has_many :role_permissions",
+        "has_many :permissions, through: [:role_permissions, :permission]",
+        "Changeset validates required [:name], unique name, name format (lowercase + underscores)",
+        "Migration is idempotent",
+        "Indexes: unique on :name",
+        "Edge case: test name with spaces rejected (only lowercase + underscores)",
+        "Edge case: test system roles (is_system: true) cannot be deleted",
+        "Edge case: test duplicate role name returns changeset error",
+        "Add role_fixture/1 to test/support/fixtures/accounts_fixtures.ex",
+        "Tests for valid/invalid changesets",
+        "SECURITY: Changeset must use explicit cast/3 with only [:name, :description] - NEVER include [:is_system] in user-facing changeset. is_system only set by seed/system code",
+        "mix format passes",
+        "mix credo --strict passes",
+        "mix test passes"
+      ]
+    },
+    {
+      "id": "AUTH-005",
+      "title": "Create Permission schema",
+      "description": "Permission represents a single action on a resource in resource:action format (e.g., dashboard:view, agents:create). Stored in database, never hardcoded.",
+      "priority": 5,
+      "passes": false,
+      "dependsOn": [
+        "AUTH-004"
+      ],
+      "acceptanceCriteria": [
+        "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
+        "MANDATORY: Permissions are database records - ZERO hardcoded permission strings in application code. All permission checks resolve from database",
+        "Schema at lib/swarmshield/accounts/permission.ex",
+        "Uses @primary_key {:id, :binary_id, autogenerate: true}",
+        "Fields: resource (string, required), action (string, required), description (string)",
+        "Unique constraint on [:resource, :action] combination",
+        "Helper function: key/1 returns 'resource:action' string",
+        "Changeset validates required [:resource, :action]",
+        "Migration is idempotent",
+        "Indexes: unique composite on [:resource, :action]",
+        "Tests for valid/invalid changesets, key/1 helper",
+        "mix format passes",
+        "mix credo --strict passes",
+        "mix test passes"
+      ]
+    },
+    {
+      "id": "AUTH-006",
+      "title": "Create RolePermission join table",
+      "description": "Many-to-many join between Role and Permission. A role has many permissions, and a permission can belong to many roles.",
+      "priority": 6,
+      "passes": false,
+      "dependsOn": [
+        "AUTH-004",
+        "AUTH-005"
+      ],
+      "acceptanceCriteria": [
+        "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
+        "MANDATORY: Role-permission mappings are database-driven join records - ZERO hardcoded role-to-permission mappings in code",
+        "Schema at lib/swarmshield/accounts/role_permission.ex",
+        "Uses @primary_key {:id, :binary_id, autogenerate: true}",
+        "belongs_to :role",
+        "belongs_to :permission",
+        "Unique constraint on [:role_id, :permission_id]",
+        "Migration is idempotent",
+        "Indexes: unique composite on [:role_id, :permission_id], index on :permission_id",
+        "Tests for valid changeset, unique constraint",
+        "mix format passes",
+        "mix credo --strict passes",
+        "mix test passes"
+      ]
+    },
+    {
+      "id": "AUTH-007",
+      "title": "Create UserWorkspaceRole junction",
+      "description": "Junction table linking a user to a workspace with a specific role. This is the core RBAC assignment - a user has a role within the context of a specific workspace.",
+      "priority": 7,
+      "passes": false,
+      "dependsOn": [
+        "AUTH-003",
+        "AUTH-004"
+      ],
+      "acceptanceCriteria": [
+        "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
+        "MANDATORY: User-workspace-role assignments are database records - ZERO hardcoded user role assignments",
+        "Schema at lib/swarmshield/accounts/user_workspace_role.ex",
+        "Uses @primary_key {:id, :binary_id, autogenerate: true}",
+        "belongs_to :user",
+        "belongs_to :workspace",
+        "belongs_to :role",
+        "Unique constraint on [:user_id, :workspace_id] (one role per user per workspace)",
+        "Changeset validates required [:user_id, :workspace_id, :role_id]",
+        "Migration is idempotent",
+        "Indexes: unique composite on [:user_id, :workspace_id], index on :workspace_id, index on :role_id",
+        "Tests for valid/invalid changesets, unique constraint",
+        "SECURITY: Only users with settings:update permission can call assign_user_to_workspace/3 - verify authorization in context function or caller",
+        "mix format passes",
+        "mix credo --strict passes",
+        "mix test passes"
+      ]
+    },
+    {
+      "id": "AUTH-008",
+      "title": "Create Accounts context functions",
+      "description": "Accounts context provides CRUD for workspaces and role assignments. All functions include proper preloads to avoid N+1 queries. This is the single access point for auth-related data.",
+      "priority": 8,
+      "passes": false,
+      "dependsOn": [
+        "AUTH-003"
+      ],
+      "acceptanceCriteria": [
+        "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
+        "MANDATORY: All business logic database-driven. No hardcoded workspace names, configs, or role assignments in context functions",
+        "Context at lib/swarmshield/accounts.ex (extend generated file)",
+        "Workspace CRUD: list_workspaces/0 (all workspaces, with preloads), get_workspace!/1 (with preloads), create_workspace/1, update_workspace/2",
+        "Workspace by API key: get_workspace_by_api_key/1 (SHA256 hash lookup)",
+        "Role assignment: assign_user_to_workspace/3 (user, workspace, role), remove_user_from_workspace/2, get_user_workspace_role/2",
+        "User workspace listing: list_user_workspaces/1 (with role preloaded)",
+        "All list functions include preloads (no N+1)",
+        "generate_workspace_api_key/1 returns {raw_key, hash} - raw key shown once, hash stored",
+        "Edge case: get_workspace!/1 raises Ecto.NoResultsError for missing ID",
+        "Edge case: get_workspace_by_api_key/1 returns nil for unknown key",
+        "Edge case: assign_user_to_workspace/3 replaces existing role (not duplicate)",
+        "Edge case: remove_user_from_workspace/2 is idempotent (no error if not member)",
+        "Edge case: list_user_workspaces/1 returns empty list for user with no workspaces",
+        "Edge case: delete_workspace/1 returns error if workspace has data (agents, events, etc.)",
+        "All functions use pattern matching for return values",
+        "Tests for all functions with edge cases - minimum 25 test cases",
+        "SECURITY: generate_workspace_api_key/1 must use :crypto.strong_rand_bytes(32) for cryptographic randomness",
+        "SECURITY: All state-changing context functions must create audit_entry records via Accounts.create_audit_entry/1",
+        "mix format passes",
+        "mix credo --strict passes",
+        "mix test passes"
+      ]
+    },
+    {
+      "id": "AUTH-009",
+      "title": "Create Authorization module",
+      "description": "Pure-function authorization module that checks permissions against the database-driven RBAC system. No side effects - just boolean checks. Used by LiveView hooks and controllers.",
+      "priority": 9,
+      "passes": false,
+      "dependsOn": [
+        "AUTH-007"
+      ],
+      "acceptanceCriteria": [
+        "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
+        "MANDATORY: Authorization checks resolve permissions from database via context functions - ZERO hardcoded permission checks or role name comparisons",
+        "Module at lib/swarmshield/authorization.ex",
+        "has_permission?/3 - (user, workspace, permission_key) returns boolean",
+        "has_role?/3 - (user, workspace, role_name) returns boolean",
+        "has_any_permission?/3 - (user, workspace, [permission_keys]) returns boolean",
+        "authorize!/3 - (user, workspace, permission_key) returns :ok or raises UnauthorizedError",
+        "Loads user role + permissions via Accounts context (with preloads, no N+1)",
+        "Pattern matching for all function heads",
+        "Custom UnauthorizedError exception module",
+        "Edge case: user with no workspace role returns false for all permissions",
+        "Edge case: user in suspended workspace returns false for all permissions",
+        "Edge case: nil user returns false",
+        "Edge case: nil workspace returns false",
+        "Edge case: has_any_permission?/3 returns true if ANY permission matches",
+        "Edge case: authorize!/3 raises Swarmshield.UnauthorizedError with descriptive message",
+        "Edge case: super_admin role has all permissions",
+        "Tests for authorized/unauthorized scenarios - minimum 15 test cases covering all edge cases",
+        "mix format passes",
+        "mix credo --strict passes",
+        "mix test passes"
+      ]
+    },
+    {
+      "id": "AUTH-010",
+      "title": "Seed default roles and permissions",
+      "description": "Seed file that creates the 4 default roles and all permissions. Must be idempotent. This is the foundation that all role-based access depends on.",
+      "priority": 10,
+      "passes": false,
+      "dependsOn": [
+        "AUTH-006"
+      ],
+      "acceptanceCriteria": [
+        "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
+        "MANDATORY: Seeds create database records. Application code NEVER references role names like 'super_admin' directly - always queries by database role record",
+        "Seed file at priv/repo/seeds/roles_and_permissions.exs",
+        "Creates permissions: dashboard:view, dashboard:export, events:view, events:export, agents:view, agents:create, agents:update, agents:delete, workflows:view, workflows:create, workflows:update, workflows:delete, policies:view, policies:create, policies:update, policies:delete, deliberations:view, deliberations:trigger, deliberations:export, audit:view, audit:export, settings:view, settings:update",
+        "Creates roles: super_admin (all permissions, is_system: true), admin (all except settings:update), analyst (view + trigger + export), viewer (view-only permissions)",
+        "Assigns correct permissions to each role via RolePermission",
+        "Idempotent: uses on_conflict: :nothing or upsert strategy",
+        "Can run multiple times safely: mix run priv/repo/seeds/roles_and_permissions.exs",
+        "Included in main seeds.exs",
+        "mix format passes",
+        "mix credo --strict passes",
+        "mix test passes"
+      ]
+    },
+    {
+      "id": "AUTH-011",
+      "title": "Create workspace-scoped LiveView hooks",
+      "description": "on_mount hooks that enforce workspace scope and permission checks in LiveViews. Every LiveView that displays workspace data must use these hooks to ensure proper authorization.",
+      "priority": 11,
+      "passes": false,
+      "dependsOn": [
+        "AUTH-009"
+      ],
+      "acceptanceCriteria": [
+        "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
+        "MANDATORY: Hooks load workspace and permissions from database - ZERO hardcoded workspace IDs, role names, or permission strings in hook code",
+        "Hook module at lib/swarmshield_web/hooks/auth_hooks.ex",
+        "on_mount :ensure_authenticated - redirects to login if not authenticated",
+        "on_mount :load_workspace - loads workspace from URL params, assigns to socket",
+        "on_mount :require_permission - checks permission via Authorization module, halts with 403 if denied",
+        "Assigns :current_workspace, :current_role to socket",
+        "Uses Phoenix 1.8 / LiveView 1.1 on_mount patterns",
+        "Pattern matching for all hook callbacks",
+        "No direct Repo calls - uses Accounts context",
+        "Hooks wired in router.ex: live_session :authenticated with on_mount hooks",
+        "Edge case: unauthenticated user redirected to /users/log_in with flash message",
+        "Edge case: workspace not found returns 404 (not crash)",
+        "Edge case: user not member of workspace returns 403",
+        "Edge case: user has role but lacks specific permission returns 403",
+        "Edge case: suspended workspace blocks all access with informative message",
+        "Edge case: session token expired redirects to login",
+        "Tests for authenticated/unauthenticated, authorized/unauthorized, missing workspace - minimum 10 test cases",
+        "SECURITY: on_mount must validate workspace_id is valid binary_id format BEFORE database lookup - reject malformed IDs",
+        "SECURITY: on_mount hooks must assign current user's permissions to socket.assigns for handle_event checks without re-querying DB",
+        "mix format passes",
+        "mix credo --strict passes",
+        "mix test passes"
+      ]
+    },
+    {
+      "id": "AUTH-012",
+      "title": "Create AuditEntry schema",
+      "description": "Immutable, insert-only audit log. Every significant action in the system creates an audit entry. This is critical for security compliance - audit entries are never updated or deleted.",
+      "priority": 12,
+      "passes": false,
+      "dependsOn": [
+        "AUTH-001"
+      ],
+      "acceptanceCriteria": [
+        "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
+        "Schema at lib/swarmshield/accounts/audit_entry.ex",
+        "Uses @primary_key {:id, :binary_id, autogenerate: true}",
+        "Fields: action (string, required), resource_type (string, required), resource_id (binary_id), actor_id (binary_id, references users), actor_email (string), workspace_id (binary_id), metadata (map, default %{}), ip_address (string), user_agent (string)",
+        "belongs_to :actor, Swarmshield.Accounts.User (optional - system actions have no actor)",
+        "belongs_to :workspace (optional - some actions are system-level)",
+        "NO update or delete changeset - insert only",
+        "Context function: create_audit_entry/1 in Accounts",
+        "Context function: list_audit_entries/1 with filtering (by workspace, action, actor, date range) and pagination",
+        "Migration is idempotent",
+        "Indexes: on :workspace_id, :actor_id, :action, :resource_type, :inserted_at, composite [:workspace_id, :inserted_at]",
+        "Edge case: create_audit_entry/1 succeeds even with nil actor_id (system actions)",
+        "Edge case: create_audit_entry/1 succeeds even with nil workspace_id (system-level actions)",
+        "Edge case: list_audit_entries/1 with no filters returns all entries for workspace (paginated)",
+        "Edge case: list_audit_entries/1 with date range filter works correctly with timezone boundaries",
+        "Edge case: attempting to update audit entry raises or returns error (immutable)",
+        "Edge case: attempting to delete audit entry raises or returns error (immutable)",
+        "Edge case: large metadata map (>10KB) is accepted and stored correctly",
+        "Add audit_entry_fixture/1 to test/support/fixtures/accounts_fixtures.ex",
+        "Tests for creation, filtering, pagination, immutability - minimum 12 test cases",
+        "SECURITY: Audit entry metadata must NEVER contain passwords, raw API keys, or tokens - sanitize before storage",
+        "SECURITY: IP address and user_agent must be captured from conn/socket, NEVER from user input params",
+        "SECURITY: list_audit_entries/1 must enforce workspace_id as mandatory filter - NEVER return cross-workspace audit data",
+        "mix format passes",
+        "mix credo --strict passes",
+        "mix test passes"
+      ]
+    },
+    {
+      "id": "AUTH-013",
+      "title": "Post-login redirect and workspace resolution",
+      "description": "After successful login, the system must determine where to send the user. If the user has no workspace, redirect to onboarding. If they have exactly one workspace, set it in session and go to dashboard. If they have multiple, show a workspace selector. This is the critical glue between authentication and the workspace-scoped application.",
+      "priority": 13,
+      "passes": false,
+      "dependsOn": [
+        "AUTH-007",
+        "AUTH-011"
+      ],
+      "acceptanceCriteria": [
+        "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
+        "MANDATORY: All redirect logic database-driven - workspace list from Accounts context, ZERO hardcoded paths based on role names",
+        "Hook or plug at lib/swarmshield_web/hooks/workspace_resolver.ex",
+        "After login, check user's workspaces via Accounts.list_user_workspaces/1",
+        "Case 1: user has 0 workspaces -> redirect to /onboarding",
+        "Case 2: user has 1 workspace -> store workspace_id in session, redirect to /dashboard",
+        "Case 3: user has 2+ workspaces -> redirect to /select-workspace",
+        "Store current_workspace_id in session (not URL params) for clean URLs",
+        "on_mount :load_workspace reads workspace_id from session and assigns :current_workspace, :current_role",
+        "If session workspace_id is stale (workspace deleted/suspended), redirect to /select-workspace",
+        "Wired into router.ex live_session :authenticated block",
+        "Pattern matching for all cases",
+        "Edge case: user removed from workspace while logged in -> redirect to /select-workspace on next request",
+        "Edge case: workspace suspended while user is active -> show 'workspace suspended' page",
+        "Edge case: session expired -> redirect to login",
+        "Tests for all 3 cases + edge cases - minimum 8 test cases",
+        "mix format passes",
+        "mix credo --strict passes",
+        "mix test passes"
+      ]
+    },
+    {
+      "id": "AUTH-014",
+      "title": "Onboarding flow - create first workspace",
+      "description": "When a new user registers and has no workspace, they must create one before accessing the app. The onboarding flow creates a workspace, auto-assigns the user as super_admin, seeds default roles/permissions for the workspace, and redirects to the dashboard.",
+      "priority": 14,
+      "passes": false,
+      "dependsOn": [
+        "AUTH-010",
+        "AUTH-013"
+      ],
+      "acceptanceCriteria": [
+        "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
+        "MANDATORY: Comply with docs/UI_PATTERNS.md - dark theme, responsive, phx-debounce on all inputs",
+        "MANDATORY: All business logic database-driven - ZERO hardcoded workspace names or defaults",
+        "LiveView at lib/swarmshield_web/live/onboarding_live.ex",
+        "Route: live '/onboarding', OnboardingLive (outside workspace-scoped live_session)",
+        "Step 1: Workspace name input (phx-debounce='300'), auto-generate slug from name",
+        "Step 2: Brief description (optional)",
+        "On submit: create workspace, auto-assign current user as super_admin role",
+        "Seed default roles and permissions for the new workspace (reuse AUTH-010 seed logic as context function)",
+        "Generate workspace API key, store hash, show raw key ONCE on success page with copy button",
+        "Store workspace_id in session, redirect to /dashboard",
+        "Dark theme styling consistent with landing page",
+        "Validates workspace name uniqueness (slug unique check)",
+        "Edge case: user already has workspaces -> redirect to /dashboard (not /onboarding)",
+        "Edge case: duplicate slug -> show changeset error inline",
+        "Edge case: concurrent registration creating same slug -> handle unique constraint gracefully",
+        "Tests for complete flow, edge cases - minimum 6 test cases",
+        "mix format passes",
+        "mix credo --strict passes",
+        "mix test passes"
+      ]
+    },
+    {
+      "id": "AUTH-015",
+      "title": "Wire router.ex with live_session blocks and on_mount hooks",
+      "description": "Define the complete router structure with proper live_session blocks. Public routes (landing, auth) have no workspace scope. Authenticated routes load workspace from session. Admin routes check admin permissions. This is the wiring that connects auth hooks to LiveViews.",
+      "priority": 15,
+      "passes": false,
+      "dependsOn": [
+        "AUTH-011",
+        "AUTH-013"
+      ],
+      "acceptanceCriteria": [
+        "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
+        "Update lib/swarmshield_web/router.ex with complete route structure",
+        "Public scope (no auth): LandingLive at '/', auth routes from phx.gen.auth",
+        "Onboarding scope (authenticated, no workspace): OnboardingLive at '/onboarding', WorkspaceSelectorLive at '/select-workspace'",
+        "Dashboard live_session :workspace_authenticated with on_mount [:ensure_authenticated, :load_workspace]: DashboardLive, EventsLive, EventShowLive, AgentsLive, AgentShowLive, DeliberationsLive, DeliberationShowLive, AuditLive",
+        "Admin live_session :workspace_admin with on_mount [:ensure_authenticated, :load_workspace, {:require_permission, 'admin_access'}]: all Admin.* LiveViews",
+        "API scope '/api/v1' with :api pipeline (from GW-002)",
+        "All routes use Phoenix 1.8 / LiveView 1.1 patterns",
+        "Edge case: accessing /admin/* without admin role returns 403",
+        "Edge case: accessing /dashboard without workspace in session redirects to /select-workspace",
+        "Edge case: accessing /onboarding with existing workspace redirects to /dashboard",
+        "Router compiles without warnings",
+        "Tests verify route accessibility for each role",
+        "SECURITY: Browser pipeline must include :protect_from_forgery and :put_secure_browser_headers plugs",
+        "SECURITY: API pipeline must include request body size limit (Plug.Parsers :length option)",
+        "SECURITY: No debug routes (/dev/mailbox, LiveDashboard) exposed in production - use environment guards",
+        "SECURITY: Admin live_session on_mount must verify permissions on BOTH mount AND every handle_event",
+        "mix format passes",
+        "mix credo --strict passes",
+        "mix test passes"
+      ]
+    }
+  ]
+}
