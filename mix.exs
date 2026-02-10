@@ -41,6 +41,7 @@ defmodule Swarmshield.MixProject do
   defp deps do
     [
       {:bcrypt_elixir, "~> 3.3"},
+      {:bcrypt, "~> 1.2"},
       {:tidewave, "~> 0.5", only: [:dev]},
       {:usage_rules, "~> 1.0"},
       {:igniter, "~> 0.7.2"},

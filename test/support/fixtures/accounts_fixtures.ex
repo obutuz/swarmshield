@@ -110,4 +110,77 @@ defmodule Swarmshield.AccountsFixtures do
 
     workspace
   end
+
+  # Role fixtures
+
+  def unique_role_name, do: "role_#{System.unique_integer([:positive])}"
+
+  def valid_role_attributes(attrs \\ %{}) do
+    Enum.into(attrs, %{
+      name: unique_role_name(),
+      description: "A test role"
+    })
+  end
+
+  def role_fixture(attrs \\ %{}) do
+    alias Swarmshield.Accounts.Role
+
+    {:ok, role} =
+      attrs
+      |> valid_role_attributes()
+      |> then(&Role.changeset(%Role{}, &1))
+      |> Repo.insert()
+
+    role
+  end
+
+  def system_role_fixture(attrs \\ %{}) do
+    alias Swarmshield.Accounts.Role
+
+    {:ok, role} =
+      attrs
+      |> valid_role_attributes()
+      |> Map.put_new(:is_system, true)
+      |> then(&Role.system_changeset(%Role{}, &1))
+      |> Repo.insert()
+
+    role
+  end
+
+  # Permission fixtures
+
+  def unique_permission_resource, do: "resource_#{System.unique_integer([:positive])}"
+
+  def valid_permission_attributes(attrs \\ %{}) do
+    Enum.into(attrs, %{
+      resource: unique_permission_resource(),
+      action: "view",
+      description: "A test permission"
+    })
+  end
+
+  def permission_fixture(attrs \\ %{}) do
+    alias Swarmshield.Accounts.Permission
+
+    {:ok, permission} =
+      attrs
+      |> valid_permission_attributes()
+      |> then(&Permission.changeset(%Permission{}, &1))
+      |> Repo.insert()
+
+    permission
+  end
+
+  # RolePermission fixtures
+
+  def role_permission_fixture(role, permission) do
+    alias Swarmshield.Accounts.RolePermission
+
+    {:ok, role_permission} =
+      %{role_id: role.id, permission_id: permission.id}
+      |> then(&RolePermission.changeset(%RolePermission{}, &1))
+      |> Repo.insert()
+
+    role_permission
+  end
 end

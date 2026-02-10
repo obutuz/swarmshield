@@ -84,7 +84,7 @@
       "title": "Create Role schema with database-driven permissions",
       "description": "Role defines a named set of permissions. Roles are NOT hardcoded - they are database records. Default roles (super_admin, admin, analyst, viewer) are seeded but can be customized per workspace.",
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "AUTH-001"
       ],
@@ -115,7 +115,7 @@
       "title": "Create Permission schema",
       "description": "Permission represents a single action on a resource in resource:action format (e.g., dashboard:view, agents:create). Stored in database, never hardcoded.",
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "AUTH-004"
       ],
@@ -141,7 +141,7 @@
       "title": "Create RolePermission join table",
       "description": "Many-to-many join between Role and Permission. A role has many permissions, and a permission can belong to many roles.",
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "AUTH-004",
         "AUTH-005"
