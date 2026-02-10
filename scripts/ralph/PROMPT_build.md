@@ -61,6 +61,7 @@ Only AFTER Steps 0-2 are complete can you write code.
 - Pattern matching throughout
 - Extract values before async callbacks (no socket copying)
 - ETS caches: try/rescue in handle_continue, rescue ArgumentError in reads
+- ETS cache invalidation: PubSub-driven, per-workspace (not global flush), debounced for bulk updates
 
 **Schema conventions:**
 ```elixir
@@ -130,6 +131,22 @@ SwarmShield is an AI Agent Firewall - "Cloudflare for AI Agents". It monitors, e
 - **Deliberation** - Multi-agent Opus 4.6 analysis of flagged events
 - **Workflows** - Ordered analysis pipelines with multiple agent steps
 - **Consensus** - Majority/supermajority/weighted voting on verdicts
+
+**ETS Cache Architecture (20M+ users - no Nebulex, raw ETS + PubSub):**
+| Cache | GenServer | ETS Table | What | Invalidation |
+|-------|-----------|-----------|------|-------------|
+| AuthCache | `Swarmshield.Authorization.AuthCache` | `:auth_permissions_cache` | user+workspace permissions | PubSub `auth:permissions_changed`, 5-min TTL |
+| PolicyCache | `Swarmshield.Policies.PolicyCache` | `:policy_rules_cache`, `:detection_rules_cache` | Policy/detection rules per workspace | PubSub `policy_rules:*`, debounced |
+| ApiKeyCache | `Swarmshield.Gateway.ApiKeyCache` | `:api_key_cache` | API key hash -> agent mapping | PubSub `agents:status_changed`, immediate |
+| RateLimitCounters | (part of PolicyEngine) | `:rate_limit_counters` | Sliding window counters | TTL-based self-cleanup |
+| LLM Budget | `Swarmshield.LLM.Budget` | `:llm_budget` | Workspace LLM spend | Direct ETS update_counter |
+
+All caches follow the same pattern:
+1. GenServer creates ETS table in `init/1`
+2. `handle_continue(:load_cache)` wrapped in `try/rescue`
+3. Public reads: ETS lookup, rescue `ArgumentError`, fallback to DB
+4. Invalidation: PubSub subscription, per-workspace (never global flush)
+5. Debounce bulk updates to prevent thundering herd
 
 **File paths:**
 - Schemas: `lib/swarmshield/[context]/[schema].ex`

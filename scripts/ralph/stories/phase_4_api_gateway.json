@@ -34,7 +34,7 @@
         "Implements Plug behaviour (init/1, call/2)",
         "Extracts Bearer token from Authorization header",
         "Hashes token with :crypto.hash(:sha256, token) |> Base.encode16(case: :lower)",
-        "Looks up RegisteredAgent by api_key_hash via Gateway context",
+        "Looks up RegisteredAgent by api_key_hash via ApiKeyCache ETS (sub-ms lookup, falls back to DB on cache miss)",
         "On success: assigns :current_agent and :current_workspace to conn",
         "On failure (missing header): returns 401 with JSON error",
         "On failure (invalid token): returns 401 with JSON error",
