@@ -27,7 +27,7 @@
       "title": "Run mix phx.gen.auth with binary_id",
       "description": "Generate the authentication system using phx.gen.auth. This provides user registration, login, logout, email confirmation, and password reset. Must use binary_id for all primary keys.",
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "dependsOn": [],
       "acceptanceCriteria": [
         "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",

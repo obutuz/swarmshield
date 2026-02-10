@@ -56,12 +56,90 @@ Only AFTER Steps 0-2 are complete can you write code.
 - `mix test` passes
 - All business logic is database-driven (zero hardcoded values)
 - No N+1 queries (use preloads)
+- No correlated subqueries (use JOINs or Ecto subqueries)
 - No race conditions
 - No direct Repo calls in LiveViews (use context functions)
 - Pattern matching throughout
 - Extract values before async callbacks (no socket copying)
 - ETS caches: try/rescue in handle_continue, rescue ArgumentError in reads
 - ETS cache invalidation: PubSub-driven, per-workspace (not global flush), debounced for bulk updates
+
+**Query quality rules (every context function):**
+```
+1. NO correlated subqueries - Never write a query that executes a subquery per row.
+   Use Ecto.Query.subquery/1 for derived tables, or rewrite as JOIN.
+
+   # WRONG - correlated subquery per row
+   from(a in Agent, where: a.event_count == subquery(
+     from(e in Event, where: e.agent_id == parent_as(:agent).id, select: count())
+   ))
+
+   # CORRECT - JOIN with aggregate
+   from(a in Agent,
+     left_join: e in assoc(a, :events),
+     group_by: a.id,
+     select: {a, count(e.id)})
+
+2. Proper JOINs over multiple queries - Never load parents then loop to load children.
+   Use join/preload in a single query.
+
+   # WRONG - 2 queries when 1 suffices
+   agents = Repo.all(from a in Agent, where: a.workspace_id == ^wid)
+   Enum.map(agents, fn a -> Repo.all(from e in Event, where: e.agent_id == ^a.id) end)
+
+   # CORRECT - single query with preload
+   Repo.all(from a in Agent, where: a.workspace_id == ^wid, preload: [:events])
+
+3. Database-level aggregates - Use COUNT/SUM/AVG in SQL, never Enum.count on loaded records.
+
+   # WRONG - loads all rows into memory
+   events = Repo.all(from e in Event, where: e.workspace_id == ^wid)
+   length(events)
+
+   # CORRECT - database COUNT
+   Repo.aggregate(from(e in Event, where: e.workspace_id == ^wid), :count)
+   # Or for multiple aggregates:
+   from(e in Event, where: e.workspace_id == ^wid,
+     select: %{total: count(e.id), flagged: count(fragment("CASE WHEN ? = 'flagged' THEN 1 END", e.status))})
+
+4. CTE/window functions for complex analytics - Use CTEs for dashboard stats, trend calculations.
+
+   # CORRECT - CTE for multi-stat dashboard query
+   stats_query = from(e in Event,
+     where: e.workspace_id == ^wid and e.inserted_at >= ^since,
+     select: %{
+       total: count(e.id),
+       flagged: filter(count(e.id), e.status == :flagged),
+       blocked: filter(count(e.id), e.status == :blocked)
+     })
+
+   # CORRECT - window function for time-series
+   from(e in Event,
+     where: e.workspace_id == ^wid,
+     select: %{
+       hour: fragment("date_trunc('hour', ?)", e.inserted_at),
+       count: over(count(e.id), partition_by: fragment("date_trunc('hour', ?)", e.inserted_at))
+     })
+
+5. Pagination MUST be database-level - Always LIMIT/OFFSET or cursor-based.
+   Never Enum.slice on loaded records. Return {results, total_count} tuple.
+
+   # CORRECT - database pagination
+   query = from(e in Event, where: e.workspace_id == ^wid, order_by: [desc: e.inserted_at])
+   total = Repo.aggregate(query, :count)
+   results = Repo.all(from q in query, limit: ^limit, offset: ^offset)
+   {results, total}
+
+6. Atomic updates over read-modify-write - Use Repo.update_all for counters.
+
+   # WRONG - race condition
+   agent = Repo.get!(Agent, id)
+   Agent.changeset(agent, %{event_count: agent.event_count + 1}) |> Repo.update()
+
+   # CORRECT - atomic increment
+   from(a in Agent, where: a.id == ^id)
+   |> Repo.update_all(inc: [event_count: 1])
+```
 
 **Schema conventions:**
 ```elixir

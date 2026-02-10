@@ -32,7 +32,7 @@ echo ""
 cd "$PROJECT_ROOT"
 
 # Run in interactive mode (no -p flag, no --dangerously-skip-permissions)
-cat "$PROMPT_FILE" | claude
+cat "$PROMPT_FILE" | claude --dangerously-skip-permissions
 
 echo ""
 echo "=================================================================="

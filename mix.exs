@@ -40,6 +40,7 @@ defmodule Swarmshield.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:bcrypt_elixir, "~> 3.0"},
       {:tidewave, "~> 0.5", only: [:dev]},
       {:usage_rules, "~> 1.0"},
       {:igniter, "~> 0.7.2"},
