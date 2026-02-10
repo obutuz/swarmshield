@@ -167,7 +167,7 @@
       "title": "Create UserWorkspaceRole junction",
       "description": "Junction table linking a user to a workspace with a specific role. This is the core RBAC assignment - a user has a role within the context of a specific workspace.",
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "AUTH-003",
         "AUTH-004"

@@ -183,4 +183,17 @@ defmodule Swarmshield.AccountsFixtures do
 
     role_permission
   end
+
+  # UserWorkspaceRole fixtures
+
+  def user_workspace_role_fixture(user, workspace, role) do
+    alias Swarmshield.Accounts.UserWorkspaceRole
+
+    {:ok, uwr} =
+      %{user_id: user.id, workspace_id: workspace.id, role_id: role.id}
+      |> then(&UserWorkspaceRole.changeset(%UserWorkspaceRole{}, &1))
+      |> Repo.insert()
+
+    uwr
+  end
 end

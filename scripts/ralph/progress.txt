@@ -16,3 +16,4 @@ AUTH-003 DONE 2026-02-10 Create Workspace schema and migration - 132 tests pass,
 AUTH-004 DONE 2026-02-10 Create Role schema with database-driven permissions - 169 tests pass, credo clean
 AUTH-005 DONE 2026-02-10 Create Permission schema - 169 tests pass, credo clean
 AUTH-006 DONE 2026-02-10 Create RolePermission join table - 169 tests pass, credo clean
+AUTH-007 DONE 2026-02-10 Create UserWorkspaceRole junction - 180 tests pass, credo clean
