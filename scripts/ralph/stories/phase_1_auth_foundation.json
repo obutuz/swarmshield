@@ -196,7 +196,7 @@
       "title": "Create Accounts context functions",
       "description": "Accounts context provides CRUD for workspaces and role assignments. All functions include proper preloads to avoid N+1 queries. This is the single access point for auth-related data.",
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "AUTH-003"
       ],

@@ -14,6 +14,9 @@ defmodule Swarmshield.Accounts.User do
     field :confirmed_at, :utc_datetime
     field :authenticated_at, :utc_datetime, virtual: true
 
+    has_many :user_workspace_roles, Swarmshield.Accounts.UserWorkspaceRole
+    has_many :workspaces, through: [:user_workspace_roles, :workspace]
+
     timestamps(type: :utc_datetime)
   end
 

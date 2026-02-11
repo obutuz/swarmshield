@@ -21,6 +21,8 @@ defmodule Swarmshield.Accounts.Workspace do
     field :status, Ecto.Enum, values: [:active, :suspended, :archived], default: :active
     field :settings, :map, default: %{}
 
+    has_many :user_workspace_roles, Swarmshield.Accounts.UserWorkspaceRole
+
     timestamps(type: :utc_datetime)
   end
 

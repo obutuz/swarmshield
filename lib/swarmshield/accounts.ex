@@ -6,7 +6,17 @@ defmodule Swarmshield.Accounts do
   import Ecto.Query, warn: false
   alias Swarmshield.Repo
 
-  alias Swarmshield.Accounts.{AuditEntry, User, UserNotifier, UserToken}
+  alias Swarmshield.Accounts.{
+    AuditEntry,
+    User,
+    UserNotifier,
+    UserToken,
+    UserWorkspaceRole,
+    Workspace
+  }
+
+  @default_page_size 50
+  @max_page_size 100
 
   ## Database getters
 
@@ -295,6 +305,261 @@ defmodule Swarmshield.Accounts do
     end)
   end
 
+  ## Workspaces
+
+  @doc """
+  Lists all workspaces with pagination.
+
+  Returns `{workspaces, total_count}`.
+
+  ## Options
+
+    * `:page` - page number (default 1)
+    * `:page_size` - items per page (default 50, max 100)
+  """
+  def list_workspaces(opts \\ []) do
+    page = max(Keyword.get(opts, :page, 1), 1)
+
+    page_size =
+      opts |> Keyword.get(:page_size, @default_page_size) |> min(@max_page_size) |> max(1)
+
+    offset = (page - 1) * page_size
+
+    query = from(w in Workspace, order_by: [asc: w.name])
+
+    workspaces =
+      query
+      |> limit(^page_size)
+      |> offset(^offset)
+      |> Repo.all()
+
+    total_count = Repo.aggregate(query, :count)
+
+    {workspaces, total_count}
+  end
+
+  @doc """
+  Gets a single workspace by ID. Raises `Ecto.NoResultsError` if not found.
+  """
+  def get_workspace!(id) do
+    Repo.get!(Workspace, id)
+  end
+
+  @doc """
+  Creates a workspace. Creates an audit entry for the action.
+  """
+  def create_workspace(attrs) do
+    Repo.transact(fn ->
+      with {:ok, workspace} <-
+             %Workspace{}
+             |> Workspace.changeset(attrs)
+             |> Repo.insert() do
+        create_audit_entry(%{
+          action: "workspace.create",
+          resource_type: "workspace",
+          resource_id: workspace.id,
+          metadata: %{"name" => workspace.name, "slug" => workspace.slug}
+        })
+
+        {:ok, workspace}
+      end
+    end)
+  end
+
+  @doc """
+  Updates a workspace. Creates an audit entry for the action.
+  """
+  def update_workspace(%Workspace{} = workspace, attrs) do
+    Repo.transact(fn ->
+      with {:ok, updated} <-
+             workspace
+             |> Workspace.changeset(attrs)
+             |> Repo.update() do
+        create_audit_entry(%{
+          action: "workspace.update",
+          resource_type: "workspace",
+          resource_id: updated.id,
+          workspace_id: updated.id,
+          metadata: %{"changes" => Map.keys(attrs) |> Enum.map(&to_string/1)}
+        })
+
+        {:ok, updated}
+      end
+    end)
+  end
+
+  @doc """
+  Deletes a workspace. Returns error if workspace has associated domain data.
+  Creates an audit entry for the action.
+  """
+  def delete_workspace(%Workspace{} = workspace) do
+    Repo.transact(fn ->
+      create_audit_entry(%{
+        action: "workspace.delete",
+        resource_type: "workspace",
+        resource_id: workspace.id,
+        metadata: %{"name" => workspace.name, "slug" => workspace.slug}
+      })
+
+      Repo.delete(workspace)
+    end)
+  end
+
+  @doc """
+  Gets a workspace by raw API key. Performs SHA256 hash lookup.
+  Returns `nil` if no workspace matches.
+  """
+  def get_workspace_by_api_key(raw_key) when is_binary(raw_key) do
+    hash = hash_api_key(raw_key)
+    Repo.get_by(Workspace, api_key_hash: hash)
+  end
+
+  def get_workspace_by_api_key(_), do: nil
+
+  @doc """
+  Generates a cryptographically secure API key for a workspace.
+  Returns `{:ok, {raw_key, updated_workspace}}` or `{:error, changeset}`.
+
+  The raw key is shown once and never stored. Only the SHA256 hash is persisted.
+  """
+  def generate_workspace_api_key(%Workspace{} = workspace) do
+    raw_bytes = :crypto.strong_rand_bytes(32)
+    raw_key = "swrm_" <> Base.url_encode64(raw_bytes, padding: false)
+    prefix = String.slice(raw_key, 0, 8)
+    hash = hash_api_key(raw_key)
+
+    Repo.transact(fn ->
+      with {:ok, updated} <-
+             workspace
+             |> Workspace.api_key_changeset(%{api_key_hash: hash, api_key_prefix: prefix})
+             |> Repo.update() do
+        create_audit_entry(%{
+          action: "workspace.api_key_generated",
+          resource_type: "workspace",
+          resource_id: updated.id,
+          workspace_id: updated.id,
+          metadata: %{"prefix" => prefix}
+        })
+
+        {:ok, {raw_key, updated}}
+      end
+    end)
+  end
+
+  defp hash_api_key(raw_key) do
+    :crypto.hash(:sha256, raw_key) |> Base.encode16(case: :lower)
+  end
+
+  ## Role Assignments
+
+  @doc """
+  Assigns a user to a workspace with a role. Uses upsert to avoid race conditions -
+  if the user already has a role in the workspace, it is replaced atomically.
+
+  Creates an audit entry for the action.
+  """
+  def assign_user_to_workspace(%User{} = user, %Workspace{} = workspace, %{id: role_id} = role) do
+    now = DateTime.utc_now(:second)
+
+    attrs = %{user_id: user.id, workspace_id: workspace.id, role_id: role_id}
+
+    Repo.transact(fn ->
+      {:ok, uwr} =
+        %UserWorkspaceRole{}
+        |> UserWorkspaceRole.changeset(attrs)
+        |> Repo.insert(
+          on_conflict: [set: [role_id: role_id, updated_at: now]],
+          conflict_target: [:user_id, :workspace_id],
+          returning: true
+        )
+
+      create_audit_entry(%{
+        action: "workspace.user_assigned",
+        resource_type: "user_workspace_role",
+        resource_id: uwr.id,
+        actor_id: user.id,
+        workspace_id: workspace.id,
+        metadata: %{"role_name" => role.name, "user_email" => user.email}
+      })
+
+      {:ok, uwr}
+    end)
+  end
+
+  @doc """
+  Removes a user from a workspace. Idempotent - returns `:ok` even if user
+  is not a member. Creates an audit entry if a role was actually removed.
+  """
+  def remove_user_from_workspace(%User{} = user, %Workspace{} = workspace) do
+    query =
+      from(uwr in UserWorkspaceRole,
+        where: uwr.user_id == ^user.id and uwr.workspace_id == ^workspace.id
+      )
+
+    {count, _} = Repo.delete_all(query)
+
+    if count > 0 do
+      create_audit_entry(%{
+        action: "workspace.user_removed",
+        resource_type: "user_workspace_role",
+        actor_id: user.id,
+        workspace_id: workspace.id,
+        metadata: %{"user_email" => user.email}
+      })
+    end
+
+    :ok
+  end
+
+  @doc """
+  Gets the user's role assignment for a workspace. Returns the UserWorkspaceRole
+  with role preloaded, or nil if the user is not a member.
+  """
+  def get_user_workspace_role(%User{} = user, %Workspace{} = workspace) do
+    from(uwr in UserWorkspaceRole,
+      where: uwr.user_id == ^user.id and uwr.workspace_id == ^workspace.id,
+      join: r in assoc(uwr, :role),
+      preload: [role: r]
+    )
+    |> Repo.one()
+  end
+
+  @doc """
+  Lists all workspaces a user belongs to, with their role preloaded.
+  Uses JOIN preload (belongs_to) to avoid N+1.
+
+  Returns `{workspace_roles, total_count}`.
+  """
+  def list_user_workspaces(%User{} = user, opts \\ []) do
+    page = max(Keyword.get(opts, :page, 1), 1)
+
+    page_size =
+      opts |> Keyword.get(:page_size, @default_page_size) |> min(@max_page_size) |> max(1)
+
+    offset = (page - 1) * page_size
+
+    base_query =
+      from(uwr in UserWorkspaceRole,
+        where: uwr.user_id == ^user.id,
+        join: w in assoc(uwr, :workspace),
+        join: r in assoc(uwr, :role),
+        preload: [workspace: w, role: r],
+        order_by: [asc: w.name]
+      )
+
+    results =
+      base_query
+      |> limit(^page_size)
+      |> offset(^offset)
+      |> Repo.all()
+
+    total_count =
+      from(uwr in UserWorkspaceRole, where: uwr.user_id == ^user.id)
+      |> Repo.aggregate(:count)
+
+    {results, total_count}
+  end
+
   ## Audit Entries
 
   @doc """
@@ -308,9 +573,6 @@ defmodule Swarmshield.Accounts do
     |> AuditEntry.create_changeset(attrs)
     |> Repo.insert()
   end
-
-  @default_page_size 50
-  @max_page_size 100
 
   @doc """
   Lists audit entries for a workspace with filtering and pagination.

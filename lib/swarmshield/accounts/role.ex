@@ -17,9 +17,8 @@ defmodule Swarmshield.Accounts.Role do
     field :description, :string
     field :is_system, :boolean, default: false
 
-    # Associations added by AUTH-006 when RolePermission schema exists:
-    # has_many :role_permissions, Swarmshield.Accounts.RolePermission
-    # has_many :permissions, through: [:role_permissions, :permission]
+    has_many :role_permissions, Swarmshield.Accounts.RolePermission
+    has_many :permissions, through: [:role_permissions, :permission]
 
     timestamps(type: :utc_datetime)
   end
