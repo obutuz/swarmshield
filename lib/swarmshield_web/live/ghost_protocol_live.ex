@@ -13,6 +13,12 @@ defmodule SwarmshieldWeb.GhostProtocolLive do
 
   @impl true
   def mount(_params, _session, socket) do
+    if connected?(socket) do
+      workspace_id = socket.assigns.current_workspace.id
+      GhostProtocol.subscribe_to_workspace(workspace_id)
+      Deliberation.subscribe_to_workspace_deliberations(workspace_id)
+    end
+
     {:ok, assign(socket, :page_title, "GhostProtocol")}
   end
 
@@ -58,11 +64,6 @@ defmodule SwarmshieldWeb.GhostProtocolLive do
 
   defp load_data(socket) do
     workspace_id = socket.assigns.current_workspace.id
-
-    if connected?(socket) do
-      GhostProtocol.subscribe_to_workspace(workspace_id)
-      Deliberation.subscribe_to_workspace_deliberations(workspace_id)
-    end
 
     stats = GhostProtocol.get_dashboard_stats(workspace_id)
     active_sessions = GhostProtocol.list_active_ephemeral_sessions(workspace_id)

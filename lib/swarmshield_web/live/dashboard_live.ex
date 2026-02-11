@@ -384,7 +384,7 @@ defmodule SwarmshieldWeb.DashboardLive do
       class={[
         "group relative overflow-hidden rounded-xl border border-base-300/50",
         "bg-base-100 p-5 transition-all duration-200",
-        "hover:border-#{@color}/30 hover:shadow-lg hover:shadow-#{@color}/5"
+        color_hover(@color)
       ]}
     >
       <%!-- Subtle gradient accent at top --%>
@@ -507,6 +507,29 @@ defmodule SwarmshieldWeb.DashboardLive do
   defp color_icon("accent"), do: "text-accent"
   defp color_icon("secondary"), do: "text-secondary"
   defp color_icon(_), do: "text-base-content/60"
+
+  defp color_hover("info"), do: "hover:border-info/30 hover:shadow-lg hover:shadow-info/5"
+
+  defp color_hover("warning"),
+    do: "hover:border-warning/30 hover:shadow-lg hover:shadow-warning/5"
+
+  defp color_hover("error"), do: "hover:border-error/30 hover:shadow-lg hover:shadow-error/5"
+
+  defp color_hover("success"),
+    do: "hover:border-success/30 hover:shadow-lg hover:shadow-success/5"
+
+  defp color_hover("primary"),
+    do: "hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5"
+
+  defp color_hover("accent"), do: "hover:border-accent/30 hover:shadow-lg hover:shadow-accent/5"
+
+  defp color_hover("secondary"),
+    do: "hover:border-secondary/30 hover:shadow-lg hover:shadow-secondary/5"
+
+  defp color_hover("neutral"),
+    do: "hover:border-neutral/30 hover:shadow-lg hover:shadow-neutral/5"
+
+  defp color_hover(_), do: "hover:border-base-300 hover:shadow-lg"
 
   defp format_number(n) when is_integer(n) and n >= 1_000_000 do
     "#{Float.round(n / 1_000_000, 1)}M"

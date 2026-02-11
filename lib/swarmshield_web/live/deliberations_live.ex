@@ -8,6 +8,8 @@ defmodule SwarmshieldWeb.DeliberationsLive do
   """
   use SwarmshieldWeb, :live_view
 
+  import SwarmshieldWeb.LiveHelpers, only: [ephemeral?: 1, format_relative_time: 1]
+
   alias Swarmshield.Deliberation
   alias SwarmshieldWeb.Hooks.AuthHooks
 
@@ -481,36 +483,10 @@ defmodule SwarmshieldWeb.DeliberationsLive do
   defp workflow_name(%{workflow: %{name: name}}) when is_binary(name), do: name
   defp workflow_name(_session), do: "—"
 
-  defp ephemeral?(%{workflow: %{ghost_protocol_config: config}})
-       when not is_nil(config),
-       do: true
-
-  defp ephemeral?(_session), do: false
-
   defp format_confidence(nil), do: "—"
   defp format_confidence(confidence), do: "#{Float.round(confidence * 100, 1)}%"
 
   defp format_cost(0), do: "—"
   defp format_cost(nil), do: "—"
   defp format_cost(cents), do: "$#{:erlang.float_to_binary(cents / 100, decimals: 2)}"
-
-  defp format_relative_time(nil), do: "Never"
-
-  defp format_relative_time(%DateTime{} = dt) do
-    diff = DateTime.diff(DateTime.utc_now(:second), dt, :second)
-
-    cond do
-      diff < 60 -> "Just now"
-      diff < 3600 -> "#{div(diff, 60)}m ago"
-      diff < 86_400 -> "#{div(diff, 3600)}h ago"
-      diff < 604_800 -> "#{div(diff, 86_400)}d ago"
-      true -> Calendar.strftime(dt, "%b %d, %Y")
-    end
-  end
-
-  defp format_relative_time(%NaiveDateTime{} = ndt) do
-    ndt
-    |> DateTime.from_naive!("Etc/UTC")
-    |> format_relative_time()
-  end
 end

@@ -8,6 +8,8 @@ defmodule SwarmshieldWeb.GhostProtocolSessionLive do
   """
   use SwarmshieldWeb, :live_view
 
+  import SwarmshieldWeb.LiveHelpers, only: [ephemeral?: 1]
+
   alias Swarmshield.{Deliberation, GhostProtocol}
   alias SwarmshieldWeb.Hooks.AuthHooks
 
@@ -99,9 +101,6 @@ defmodule SwarmshieldWeb.GhostProtocolSessionLive do
     |> assign(:lifecycle_phases, @lifecycle_phases)
   end
 
-  defp ephemeral?(%{workflow: %{ghost_protocol_config: config}}) when not is_nil(config), do: true
-  defp ephemeral?(_session), do: false
-
   # -------------------------------------------------------------------
   # Template
   # -------------------------------------------------------------------
@@ -166,7 +165,7 @@ defmodule SwarmshieldWeb.GhostProtocolSessionLive do
             <.icon
               :if={phase_index(@session.status) < length(@lifecycle_phases) - 1}
               name="hero-chevron-right-mini"
-              class="size-4 text-base-content/20 shrink-0 hidden"
+              class="size-4 text-base-content/20 shrink-0"
             />
           </div>
         </div>

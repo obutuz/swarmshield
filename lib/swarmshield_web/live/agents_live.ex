@@ -7,6 +7,8 @@ defmodule SwarmshieldWeb.AgentsLive do
   """
   use SwarmshieldWeb, :live_view
 
+  import SwarmshieldWeb.LiveHelpers, only: [format_relative_time: 1]
+
   alias Swarmshield.Gateway
   alias SwarmshieldWeb.Hooks.AuthHooks
 
@@ -407,18 +409,4 @@ defmodule SwarmshieldWeb.AgentsLive do
   defp type_classes(:tool_agent), do: "bg-accent/10 text-accent"
   defp type_classes(:chatbot), do: "bg-base-300/30 text-base-content/60"
   defp type_classes(_), do: "bg-base-300/30 text-base-content/60"
-
-  defp format_relative_time(nil), do: "Never"
-
-  defp format_relative_time(%DateTime{} = dt) do
-    diff = DateTime.diff(DateTime.utc_now(:second), dt, :second)
-
-    cond do
-      diff < 60 -> "Just now"
-      diff < 3600 -> "#{div(diff, 60)}m ago"
-      diff < 86_400 -> "#{div(diff, 3600)}h ago"
-      diff < 604_800 -> "#{div(diff, 86_400)}d ago"
-      true -> Calendar.strftime(dt, "%b %d, %Y")
-    end
-  end
 end

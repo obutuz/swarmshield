@@ -399,11 +399,15 @@ defmodule SwarmshieldWeb.AuditLive do
   defp action_badge_class(action) do
     cond do
       ghost_protocol_action?(action) -> "bg-secondary/10 text-secondary"
-      String.contains?(action, "create") -> "bg-success/10 text-success"
-      String.contains?(action, "update") -> "bg-info/10 text-info"
-      String.contains?(action, "delete") -> "bg-error/10 text-error"
-      String.contains?(action, "login") -> "bg-primary/10 text-primary"
+      action_suffix_match?(action, "create") -> "bg-success/10 text-success"
+      action_suffix_match?(action, "update") -> "bg-info/10 text-info"
+      action_suffix_match?(action, "delete") -> "bg-error/10 text-error"
+      action_suffix_match?(action, "login") -> "bg-primary/10 text-primary"
       true -> "bg-base-300/30 text-base-content/60"
     end
+  end
+
+  defp action_suffix_match?(action, suffix) do
+    action == suffix or String.ends_with?(action, "_#{suffix}")
   end
 end

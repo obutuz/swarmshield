@@ -8,6 +8,8 @@ defmodule SwarmshieldWeb.AgentShowLive do
   """
   use SwarmshieldWeb, :live_view
 
+  import SwarmshieldWeb.LiveHelpers, only: [format_relative_time: 1]
+
   alias Swarmshield.Gateway
   alias Swarmshield.Policies
   alias SwarmshieldWeb.Hooks.AuthHooks
@@ -17,6 +19,11 @@ defmodule SwarmshieldWeb.AgentShowLive do
 
   @impl true
   def mount(_params, _session, socket) do
+    if connected?(socket) do
+      workspace_id = socket.assigns.current_workspace.id
+      Phoenix.PubSub.subscribe(Swarmshield.PubSub, "events:#{workspace_id}")
+    end
+
     {:ok,
      socket
      |> assign(:page_title, "Agent Details")
@@ -72,10 +79,6 @@ defmodule SwarmshieldWeb.AgentShowLive do
         |> redirect(to: ~p"/agents")
 
       agent ->
-        if connected?(socket) do
-          Phoenix.PubSub.subscribe(Swarmshield.PubSub, "events:#{workspace_id}")
-        end
-
         stats = Gateway.get_agent_stats(agent.id)
 
         {events, _event_count} =
@@ -540,24 +543,4 @@ defmodule SwarmshieldWeb.AgentShowLive do
   defp format_agent_type(:tool_agent), do: "Tool Agent"
   defp format_agent_type(:chatbot), do: "Chatbot"
   defp format_agent_type(type), do: type |> to_string() |> String.capitalize()
-
-  defp format_relative_time(nil), do: "Never"
-
-  defp format_relative_time(%DateTime{} = dt) do
-    diff = DateTime.diff(DateTime.utc_now(:second), dt, :second)
-
-    cond do
-      diff < 60 -> "Just now"
-      diff < 3600 -> "#{div(diff, 60)}m ago"
-      diff < 86_400 -> "#{div(diff, 3600)}h ago"
-      diff < 604_800 -> "#{div(diff, 86_400)}d ago"
-      true -> Calendar.strftime(dt, "%b %d, %Y")
-    end
-  end
-
-  defp format_relative_time(%NaiveDateTime{} = ndt) do
-    ndt
-    |> DateTime.from_naive!("Etc/UTC")
-    |> format_relative_time()
-  end
 end

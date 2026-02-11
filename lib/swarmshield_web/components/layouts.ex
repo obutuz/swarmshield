@@ -351,6 +351,12 @@ defmodule SwarmshieldWeb.Layouts do
           label="Users"
           active={@active_nav == :admin_users}
         />
+        <.nav_item
+          path={~p"/admin/workflows"}
+          icon="hero-arrow-path"
+          label="Workflows"
+          active={@active_nav == :admin_workflows}
+        />
       </div>
     <% end %>
     """

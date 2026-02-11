@@ -9,6 +9,8 @@ defmodule SwarmshieldWeb.DeliberationShowLive do
   """
   use SwarmshieldWeb, :live_view
 
+  import SwarmshieldWeb.LiveHelpers, only: [ephemeral?: 1]
+
   alias Swarmshield.Deliberation
   alias SwarmshieldWeb.Hooks.AuthHooks
 
@@ -100,9 +102,6 @@ defmodule SwarmshieldWeb.DeliberationShowLive do
     end)
     |> Enum.sort_by(& &1.inserted_at, DateTime)
   end
-
-  defp ephemeral?(%{workflow: %{ghost_protocol_config: config}}) when not is_nil(config), do: true
-  defp ephemeral?(_session), do: false
 
   # -------------------------------------------------------------------
   # Template
