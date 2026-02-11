@@ -482,6 +482,8 @@ defmodule Swarmshield.Accounts do
         metadata: %{"role_name" => role.name, "user_email" => user.email}
       })
 
+      Swarmshield.Authorization.invalidate_user_permissions(user.id, workspace.id)
+
       {:ok, uwr}
     end)
   end
@@ -506,6 +508,8 @@ defmodule Swarmshield.Accounts do
         workspace_id: workspace.id,
         metadata: %{"user_email" => user.email}
       })
+
+      Swarmshield.Authorization.invalidate_user_permissions(user.id, workspace.id)
     end
 
     :ok

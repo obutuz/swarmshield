@@ -12,8 +12,7 @@ defmodule Swarmshield.Application do
       Swarmshield.Repo,
       {DNSCluster, query: Application.get_env(:swarmshield, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Swarmshield.PubSub},
-      # Start a worker by calling: Swarmshield.Worker.start_link(arg)
-      # {Swarmshield.Worker, arg},
+      Swarmshield.Authorization.AuthCache,
       # Start to serve requests, typically the last entry
       SwarmshieldWeb.Endpoint
     ]

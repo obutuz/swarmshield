@@ -235,7 +235,7 @@
       "title": "Create Authorization module with ETS-backed AuthCache",
       "description": "Authorization module with ETS-cached permission lookups. At 20M users, has_permission?/3 is called on every handle_event - hitting the database each time is catastrophic. Uses AuthCache GenServer with ETS table to cache user+workspace permissions. PubSub-driven invalidation on role/permission changes. Pure check functions read from ETS, fallback to database on cache miss.",
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "AUTH-007"
       ],

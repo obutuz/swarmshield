@@ -19,3 +19,4 @@ AUTH-006 DONE 2026-02-10 Create RolePermission join table - 169 tests pass, cred
 AUTH-007 DONE 2026-02-10 Create UserWorkspaceRole junction - 180 tests pass, credo clean
 AUTH-012 DONE 2026-02-10 Create AuditEntry schema - 217 tests pass, credo clean
 AUTH-008 DONE 2026-02-10 Create Accounts context functions - 253 tests pass, credo clean
+AUTH-009 DONE 2026-02-10 Create Authorization module with ETS-backed AuthCache - 282 tests pass, credo clean
