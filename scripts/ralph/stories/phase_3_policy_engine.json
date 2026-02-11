@@ -99,7 +99,7 @@
       "title": "Create PolicyCache GenServer with ETS",
       "description": "PolicyCache is a GenServer that maintains ETS tables for sub-millisecond policy rule lookups. Loads rules on startup, refreshes on PubSub events. MUST follow ETS safety patterns.",
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "POLICY-002"
       ],
