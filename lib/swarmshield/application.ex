@@ -17,6 +17,10 @@ defmodule Swarmshield.Application do
       Swarmshield.Policies.PolicyCache,
       Swarmshield.Gateway.ApiKeyCache,
       SwarmshieldWeb.Plugs.ApiRateLimit.Store,
+      Swarmshield.LLM.Budget,
+      {Registry, keys: :unique, name: Swarmshield.Deliberation.SessionRegistry},
+      {DynamicSupervisor,
+       name: Swarmshield.Deliberation.SessionSupervisor, strategy: :one_for_one},
       # Start to serve requests, typically the last entry
       SwarmshieldWeb.Endpoint
     ]
