@@ -68,6 +68,20 @@ defmodule Swarmshield.Deliberation do
     |> Repo.preload(agent_instances: :deliberation_messages, verdict: [])
   end
 
+  @doc """
+  Gets the analysis session linked to an agent event, if any.
+  Returns nil if no session is linked. Preloads verdict and workflow.
+  """
+  def get_session_for_event(event_id) when is_binary(event_id) do
+    AnalysisSession
+    |> where([s], s.agent_event_id == ^event_id)
+    |> Repo.one()
+    |> case do
+      nil -> nil
+      session -> Repo.preload(session, [:verdict, workflow: :ghost_protocol_config])
+    end
+  end
+
   def create_analysis_session(attrs) when is_map(attrs) do
     result =
       %AnalysisSession{}

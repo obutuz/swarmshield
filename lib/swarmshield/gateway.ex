@@ -281,6 +281,21 @@ defmodule Swarmshield.Gateway do
   end
 
   @doc """
+  Gets an agent event scoped to a workspace. Returns nil if not found
+  or if the event doesn't belong to the workspace.
+  """
+  def get_agent_event_for_workspace(id, workspace_id)
+      when is_binary(id) and is_binary(workspace_id) do
+    AgentEvent
+    |> where([e], e.id == ^id and e.workspace_id == ^workspace_id)
+    |> Repo.one()
+    |> case do
+      nil -> nil
+      event -> Repo.preload(event, :registered_agent)
+    end
+  end
+
+  @doc """
   Creates an agent event and atomically increments the registered agent's
   event_count using `Repo.update_all(inc: ...)` to avoid read-modify-write races.
 

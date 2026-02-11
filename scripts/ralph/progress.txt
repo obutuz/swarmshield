@@ -82,3 +82,4 @@ DELIB-014 DONE 2026-02-11 Implement GhostProtocol expiry enforcement (Process.se
 DASH-001 DONE 2026-02-11 App layout with sidebar navigation (header+sidebar+mobile bottom nav, pact_africa pattern, DaisyUI semantic classes, ghost-protocol routes+stubs, all LiveViews wired) - 1318 tests pass, credo clean
 DASH-002 DONE 2026-02-11 DashboardLive (real-time stats, PubSub counters, assign_async, GOD MODE UI with stat cards, 3 context stat functions, permission check) - 1327 tests pass, credo clean
 DASH-003 DONE 2026-02-11 EventsLive (streams, composable filters, content search ILIKE, pagination, PubSub prepend, status/type/severity badges, GOD MODE UI) - 1340 tests pass, credo clean
+DASH-004 DONE 2026-02-11 EventShowLive (event detail, evaluation results, matched rules, linked violations, linked deliberation+verdict, GhostProtocol ephemeral badge, workspace-scoped 404) - 1349 tests pass, credo clean

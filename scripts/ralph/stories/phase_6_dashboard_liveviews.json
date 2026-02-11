@@ -126,7 +126,7 @@
       "title": "Create EventShowLive (event detail + policy evaluation)",
       "description": "Event detail view showing full event data, policy evaluation results, matched rules, and linked deliberation session.",
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "DASH-003"
       ],
