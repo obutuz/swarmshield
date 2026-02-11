@@ -259,20 +259,22 @@ defmodule SwarmshieldWeb.Admin.PromptTemplatesLive do
       <div class="space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 class="text-3xl font-bold text-gray-100">
+            <h1 class="text-3xl font-bold text-base-content">
               {if @live_action == :new, do: "New Prompt Template", else: "Edit Prompt Template"}
             </h1>
-            <p class="text-gray-400 mt-1">Configure a template for agent deliberation prompts</p>
+            <p class="text-base-content/70 mt-1">
+              Configure a template for agent deliberation prompts
+            </p>
           </div>
           <.link
             patch={~p"/admin/prompt-templates"}
-            class="inline-flex items-center gap-2 h-[44px] px-4 rounded-lg border border-gray-600 text-sm text-gray-100 hover:bg-gray-800 transition-colors"
+            class="inline-flex items-center gap-2 h-[44px] px-4 rounded-lg border-[0.5px] border-base-300 text-sm text-base-content hover:bg-base-200 transition-colors"
           >
             <.icon name="hero-arrow-left" class="size-4" /> Back to Templates
           </.link>
         </div>
 
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
+        <div class="bg-base-100 border-[0.5px] border-base-300 rounded-lg p-6">
           <.form
             for={@form}
             id="prompt-template-form"
@@ -323,20 +325,20 @@ defmodule SwarmshieldWeb.Admin.PromptTemplatesLive do
                 required
                 placeholder="You are analyzing a {{event_type}} event.&#10;&#10;Content: {{content}}&#10;&#10;Provide your analysis..."
               />
-              <p class="text-xs text-gray-500 mt-1">
+              <p class="text-xs text-base-content/50 mt-1">
                 Use {"{{variable_name}}"} syntax for dynamic content injection.
               </p>
             </div>
 
             <%!-- Detected variables --%>
             <div :if={@detected_variables != []} class="space-y-2">
-              <h3 class="text-sm font-semibold text-gray-300">
+              <h3 class="text-sm font-semibold text-base-content/80">
                 Detected Variables ({length(@detected_variables)})
               </h3>
               <div class="flex flex-wrap gap-1.5">
                 <span
                   :for={var <- @detected_variables}
-                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-400/20 text-blue-400"
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-info/20 text-info"
                 >
                   {"{{#{var}}}"}
                 </span>
@@ -346,12 +348,12 @@ defmodule SwarmshieldWeb.Admin.PromptTemplatesLive do
             <%!-- Preview panel --%>
             <div
               :if={@detected_variables != []}
-              class="border-t border-gray-700 pt-5 space-y-4"
+              class="border-t-[0.5px] border-base-300 pt-5 space-y-4"
             >
-              <h3 class="text-sm font-semibold text-gray-300">Preview</h3>
+              <h3 class="text-sm font-semibold text-base-content/80">Preview</h3>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div :for={var <- @detected_variables}>
-                  <label class="block text-xs font-medium text-gray-400 mb-1">{var}</label>
+                  <label class="block text-xs font-medium text-base-content/70 mb-1">{var}</label>
                   <input
                     type="text"
                     phx-blur="update_preview_value"
@@ -359,34 +361,39 @@ defmodule SwarmshieldWeb.Admin.PromptTemplatesLive do
                     phx-debounce="300"
                     placeholder={"Sample #{var} value..."}
                     value={Map.get(@preview_values, var, "")}
-                    class="w-full h-[36px] bg-gray-900 border border-gray-600 rounded-lg text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 px-3 text-sm"
+                    class="w-full h-[36px] bg-base-200 border-[0.5px] border-base-300 rounded-lg text-base-content focus:border-primary focus:ring-1 focus:ring-primary px-3 text-sm"
                   />
                 </div>
               </div>
-              <div :if={@preview_output} class="bg-gray-900 border border-gray-600 rounded-lg p-4">
-                <label class="block text-xs font-medium text-gray-400 mb-2">Rendered Output</label>
-                <pre class="text-sm text-gray-100 whitespace-pre-wrap font-mono">{@preview_output}</pre>
+              <div
+                :if={@preview_output}
+                class="bg-base-200 border-[0.5px] border-base-300 rounded-lg p-4"
+              >
+                <label class="block text-xs font-medium text-base-content/70 mb-2">
+                  Rendered Output
+                </label>
+                <pre class="text-sm text-base-content whitespace-pre-wrap font-mono">{@preview_output}</pre>
               </div>
             </div>
 
             <div class="flex items-center gap-4">
               <.input field={@form[:enabled]} type="checkbox" label="Enabled" />
-              <span :if={@template && @template.id} class="text-xs text-gray-500">
+              <span :if={@template && @template.id} class="text-xs text-base-content/50">
                 Version: {@template.version || 1}
               </span>
             </div>
 
-            <div class="flex justify-end gap-3 pt-4 border-t border-gray-700">
+            <div class="flex justify-end gap-3 pt-4 border-t-[0.5px] border-base-300">
               <.link
                 patch={~p"/admin/prompt-templates"}
-                class="inline-flex items-center h-[44px] px-6 rounded-lg border border-gray-600 text-sm text-gray-100 hover:bg-gray-700 transition-colors"
+                class="inline-flex items-center h-[44px] px-6 rounded-lg border-[0.5px] border-base-300 text-sm text-base-content hover:bg-base-200 transition-colors"
               >
                 Cancel
               </.link>
               <button
                 type="submit"
                 phx-disable-with="Saving..."
-                class="inline-flex items-center h-[44px] px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+                class="inline-flex items-center h-[44px] px-6 rounded-lg bg-primary hover:bg-primary/80 text-white text-sm font-medium transition-colors"
               >
                 <.icon name="hero-check" class="size-4 mr-2" />
                 {if @live_action == :new, do: "Create Template", else: "Save Changes"}
@@ -415,20 +422,20 @@ defmodule SwarmshieldWeb.Admin.PromptTemplatesLive do
       <div class="space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 class="text-3xl font-bold text-gray-100">
+            <h1 class="text-3xl font-bold text-base-content">
               <.icon
                 name="hero-document-text"
-                class="size-8 inline-block mr-1 text-blue-400"
+                class="size-8 inline-block mr-1 text-info"
               /> Prompt Templates
             </h1>
-            <p class="text-gray-400 mt-1">
+            <p class="text-base-content/70 mt-1">
               {@total_count} template{if @total_count != 1, do: "s"} configured
             </p>
           </div>
           <.link
             :if={AuthHooks.has_socket_permission?(assigns, "agents:create")}
             patch={~p"/admin/prompt-templates/new"}
-            class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+            class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-primary hover:bg-primary/80 text-white text-sm font-medium transition-colors"
           >
             <.icon name="hero-plus" class="size-4" /> New Template
           </.link>
@@ -436,28 +443,28 @@ defmodule SwarmshieldWeb.Admin.PromptTemplatesLive do
 
         <div
           :if={@total_count > 0}
-          class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden"
+          class="bg-base-100 border-[0.5px] border-base-300 rounded-lg overflow-hidden"
         >
           <div class="overflow-x-auto">
             <table class="w-full">
-              <thead class="bg-gray-900 border-b border-gray-700">
+              <thead class="bg-base-200 border-b-[0.5px] border-base-300">
                 <tr>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider">
                     Name
                   </th>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider hidden sm:table-cell">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider hidden sm:table-cell">
                     Category
                   </th>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider hidden md:table-cell">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider hidden md:table-cell">
                     Variables
                   </th>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider hidden lg:table-cell">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider hidden lg:table-cell">
                     Version
                   </th>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider">
                     Status
                   </th>
-                  <th class="text-right px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th class="text-right px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -467,31 +474,33 @@ defmodule SwarmshieldWeb.Admin.PromptTemplatesLive do
                   :for={{dom_id, tmpl} <- @streams.templates}
                   id={dom_id}
                   class={[
-                    "border-b border-gray-700 transition-colors",
+                    "border-b-[0.5px] border-base-300 transition-colors",
                     if(tmpl.enabled,
-                      do: "hover:bg-gray-800/50",
-                      else: "opacity-50 hover:bg-gray-800/30"
+                      do: "hover:bg-base-200/30",
+                      else: "opacity-50 hover:bg-base-200/20"
                     )
                   ]}
                 >
                   <td class="px-6 py-4">
-                    <div class="font-medium text-sm text-gray-100">{tmpl.name}</div>
+                    <div class="font-medium text-sm text-base-content">{tmpl.name}</div>
                     <div
                       :if={tmpl.description}
-                      class="text-xs text-gray-500 truncate max-w-[200px]"
+                      class="text-xs text-base-content/50 truncate max-w-[200px]"
                     >
                       {tmpl.description}
                     </div>
                   </td>
                   <td class="px-6 py-4 hidden sm:table-cell">
-                    <span :if={tmpl.category} class="text-sm text-gray-300">{tmpl.category}</span>
-                    <span :if={!tmpl.category} class="text-sm text-gray-500">&mdash;</span>
+                    <span :if={tmpl.category} class="text-sm text-base-content/80">
+                      {tmpl.category}
+                    </span>
+                    <span :if={!tmpl.category} class="text-sm text-base-content/50">&mdash;</span>
                   </td>
                   <td class="px-6 py-4 hidden md:table-cell">
-                    <span class="text-sm text-gray-300">{length(tmpl.variables || [])}</span>
+                    <span class="text-sm text-base-content/80">{length(tmpl.variables || [])}</span>
                   </td>
                   <td class="px-6 py-4 hidden lg:table-cell">
-                    <span class="text-sm text-gray-400">v{tmpl.version}</span>
+                    <span class="text-sm text-base-content/70">v{tmpl.version}</span>
                   </td>
                   <td class="px-6 py-4">
                     <button
@@ -512,7 +521,7 @@ defmodule SwarmshieldWeb.Admin.PromptTemplatesLive do
                       <.link
                         :if={AuthHooks.has_socket_permission?(assigns, "agents:update")}
                         patch={~p"/admin/prompt-templates/#{tmpl.id}/edit"}
-                        class="inline-flex items-center h-[36px] px-4 text-sm rounded bg-gray-700 hover:bg-gray-600 text-gray-100 transition-colors"
+                        class="inline-flex items-center h-[36px] px-4 text-sm rounded bg-base-200 hover:bg-base-300 text-base-content transition-colors"
                       >
                         <.icon name="hero-pencil" class="size-3.5" />
                       </.link>
@@ -521,7 +530,7 @@ defmodule SwarmshieldWeb.Admin.PromptTemplatesLive do
                         phx-click="delete"
                         phx-value-id={tmpl.id}
                         data-confirm={"Delete template \"#{tmpl.name}\"? This cannot be undone."}
-                        class="inline-flex items-center h-[36px] px-4 text-sm rounded border border-red-400/30 text-red-400 hover:bg-red-400/10 transition-colors"
+                        class="inline-flex items-center h-[36px] px-4 text-sm rounded border-[0.5px] border-error/30 text-error hover:bg-error/10 transition-colors"
                       >
                         <.icon name="hero-trash" class="size-3.5" />
                       </button>
@@ -536,14 +545,14 @@ defmodule SwarmshieldWeb.Admin.PromptTemplatesLive do
         <div
           :if={@total_count == 0}
           id="prompt-templates-empty"
-          class="bg-gray-800 border border-gray-700 rounded-lg p-12 text-center"
+          class="bg-base-100 border-[0.5px] border-base-300 rounded-lg p-12 text-center"
         >
-          <.icon name="hero-document-text" class="size-12 mx-auto text-gray-600 mb-4" />
-          <p class="text-gray-400 mb-4">No prompt templates configured</p>
+          <.icon name="hero-document-text" class="size-12 mx-auto text-base-content/30 mb-4" />
+          <p class="text-base-content/70 mb-4">No prompt templates configured</p>
           <.link
             :if={AuthHooks.has_socket_permission?(assigns, "agents:create")}
             patch={~p"/admin/prompt-templates/new"}
-            class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+            class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-primary hover:bg-primary/80 text-white text-sm font-medium transition-colors"
           >
             <.icon name="hero-plus" class="size-4" /> Create First Template
           </.link>
@@ -561,7 +570,7 @@ defmodule SwarmshieldWeb.Admin.PromptTemplatesLive do
 
   defp enabled_badge(%{enabled: true} = assigns) do
     ~H"""
-    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-400/20 text-green-400">
+    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-success/20 text-success">
       <.icon name="hero-check-circle" class="size-3" /> Enabled
     </span>
     """
@@ -569,7 +578,7 @@ defmodule SwarmshieldWeb.Admin.PromptTemplatesLive do
 
   defp enabled_badge(assigns) do
     ~H"""
-    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-400/20 text-gray-400">
+    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-base-content/10 text-base-content/70">
       <.icon name="hero-x-circle" class="size-3" /> Disabled
     </span>
     """

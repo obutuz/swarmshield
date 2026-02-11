@@ -283,16 +283,22 @@ defmodule SwarmshieldWeb.Admin.RegisteredAgentsLive do
   # View helpers
   # -------------------------------------------------------------------
 
-  defp status_class(:active), do: "bg-green-400/10 text-green-400 border border-green-400/30"
-  defp status_class(:suspended), do: "bg-red-400/10 text-red-400 border border-red-400/30"
-  defp status_class(:revoked), do: "bg-gray-400/10 text-gray-500 border border-gray-600"
-  defp status_class(_), do: "bg-gray-400/10 text-gray-400 border border-gray-400/30"
+  defp status_class(:active), do: "bg-success/10 text-success border-[0.5px] border-success/30"
+  defp status_class(:suspended), do: "bg-error/10 text-error border-[0.5px] border-error/30"
 
-  defp risk_class(:low), do: "bg-green-400/10 text-green-400 border border-green-400/30"
-  defp risk_class(:medium), do: "bg-yellow-400/10 text-yellow-400 border border-yellow-400/30"
-  defp risk_class(:high), do: "bg-red-400/10 text-red-400 border border-red-400/30"
-  defp risk_class(:critical), do: "bg-purple-400/10 text-purple-400 border border-purple-400/30"
-  defp risk_class(_), do: "bg-gray-400/10 text-gray-400 border border-gray-400/30"
+  defp status_class(:revoked),
+    do: "bg-base-content/10 text-base-content/50 border-[0.5px] border-base-300"
+
+  defp status_class(_),
+    do: "bg-base-content/10 text-base-content/70 border-[0.5px] border-base-content/30"
+
+  defp risk_class(:low), do: "bg-success/10 text-success border-[0.5px] border-success/30"
+  defp risk_class(:medium), do: "bg-yellow-400/10 text-warning border-[0.5px] border-warning/30"
+  defp risk_class(:high), do: "bg-error/10 text-error border-[0.5px] border-error/30"
+  defp risk_class(:critical), do: "bg-accent/10 text-accent border-[0.5px] border-accent/30"
+
+  defp risk_class(_),
+    do: "bg-base-content/10 text-base-content/70 border-[0.5px] border-base-content/30"
 
   defp format_changeset_errors(changeset) do
     Enum.map_join(changeset.errors, ", ", fn {field, {msg, _}} -> "#{field}: #{msg}" end)
@@ -374,16 +380,15 @@ defmodule SwarmshieldWeb.Admin.RegisteredAgentsLive do
     ~H"""
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold text-gray-100">
-          <.icon name="hero-cpu-chip" class="size-8 inline-block mr-1 text-blue-400" />
-          Registered Agents
+        <h1 class="text-3xl font-bold text-base-content">
+          <.icon name="hero-cpu-chip" class="size-8 inline-block mr-1 text-info" /> Registered Agents
         </h1>
-        <p class="text-gray-400 mt-1">{@total_count} agent(s) registered</p>
+        <p class="text-base-content/70 mt-1">{@total_count} agent(s) registered</p>
       </div>
       <.link
         :if={@has_create}
         patch={~p"/admin/registered-agents/new"}
-        class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+        class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-primary hover:bg-primary/80 text-white text-sm font-medium transition-colors"
       >
         <.icon name="hero-plus" class="size-4" /> Register Agent
       </.link>
@@ -392,35 +397,35 @@ defmodule SwarmshieldWeb.Admin.RegisteredAgentsLive do
     <%!-- Newly generated key banner --%>
     <div
       :if={@newly_generated_key}
-      class="bg-green-400/10 border border-green-400/30 rounded-lg p-4 space-y-2"
+      class="bg-success/10 border-[0.5px] border-success/30 rounded-lg p-4 space-y-2"
     >
       <div class="flex items-center gap-2">
-        <.icon name="hero-key" class="size-5 text-green-400" />
-        <p class="text-sm font-medium text-green-400">
+        <.icon name="hero-key" class="size-5 text-success" />
+        <p class="text-sm font-medium text-success">
           API key generated — copy it now!
         </p>
       </div>
       <div class="flex items-center gap-2">
-        <code class="flex-1 text-sm font-mono text-gray-100 bg-gray-900 rounded px-3 py-2 break-all">
+        <code class="flex-1 text-sm font-mono text-base-content bg-base-200 rounded px-3 py-2 break-all">
           {@newly_generated_key}
         </code>
       </div>
-      <p class="text-xs text-gray-500">This key will not be shown again. Store it securely.</p>
+      <p class="text-xs text-base-content/50">This key will not be shown again. Store it securely.</p>
       <button
         type="button"
         phx-click="dismiss_key"
-        class="text-xs text-gray-400 hover:text-gray-300 transition-colors"
+        class="text-xs text-base-content/70 hover:text-base-content/80 transition-colors"
       >
         Dismiss
       </button>
     </div>
 
     <%!-- Agents table --%>
-    <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+    <div class="bg-base-100 border-[0.5px] border-base-300 rounded-lg overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full min-w-[700px]">
           <thead>
-            <tr class="border-b border-gray-700 text-left text-sm text-gray-400">
+            <tr class="border-b-[0.5px] border-base-300 text-left text-sm text-base-content/70">
               <th class="px-6 py-3 font-medium">Name</th>
               <th class="px-6 py-3 font-medium">Type</th>
               <th class="px-6 py-3 font-medium">Status</th>
@@ -434,16 +439,16 @@ defmodule SwarmshieldWeb.Admin.RegisteredAgentsLive do
             <tr
               :for={{dom_id, agent} <- @streams.agents}
               id={dom_id}
-              class="border-b border-gray-700/50 hover:bg-gray-700/30 transition-colors"
+              class="border-b-[0.5px] border-base-300 hover:bg-base-200/30 transition-colors"
             >
               <td class="px-6 py-4">
-                <p class="text-sm font-medium text-gray-100">{agent.name}</p>
-                <p :if={agent.description} class="text-xs text-gray-500 truncate max-w-xs">
+                <p class="text-sm font-medium text-base-content">{agent.name}</p>
+                <p :if={agent.description} class="text-xs text-base-content/50 truncate max-w-xs">
                   {agent.description}
                 </p>
               </td>
               <td class="px-6 py-4">
-                <span class="text-sm text-gray-300">{agent.agent_type}</span>
+                <span class="text-sm text-base-content/80">{agent.agent_type}</span>
               </td>
               <td class="px-6 py-4">
                 <span class={"inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium #{status_class(agent.status)}"}>
@@ -456,11 +461,11 @@ defmodule SwarmshieldWeb.Admin.RegisteredAgentsLive do
                 </span>
               </td>
               <td class="px-6 py-4">
-                <span class="text-xs font-mono text-gray-400">
+                <span class="text-xs font-mono text-base-content/70">
                   {agent.api_key_prefix || "—"}...
                 </span>
               </td>
-              <td class="px-6 py-4 text-sm text-gray-400">
+              <td class="px-6 py-4 text-sm text-base-content/70">
                 {format_last_seen(agent.last_seen_at)}
               </td>
               <td class="px-6 py-4 text-right">
@@ -473,8 +478,8 @@ defmodule SwarmshieldWeb.Admin.RegisteredAgentsLive do
                     class={[
                       "px-3 py-1.5 rounded text-xs font-medium transition-colors",
                       if(agent.status == :active,
-                        do: "border border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/10",
-                        else: "border border-green-400/30 text-green-400 hover:bg-green-400/10"
+                        do: "border-[0.5px] border-warning/30 text-warning hover:bg-yellow-400/10",
+                        else: "border-[0.5px] border-success/30 text-success hover:bg-success/10"
                       )
                     ]}
                   >
@@ -483,7 +488,7 @@ defmodule SwarmshieldWeb.Admin.RegisteredAgentsLive do
                   <.link
                     :if={@has_update}
                     patch={~p"/admin/registered-agents/#{agent.id}/edit"}
-                    class="px-3 py-1.5 rounded border border-gray-600 text-gray-300 hover:bg-gray-700 text-xs font-medium transition-colors"
+                    class="px-3 py-1.5 rounded border-[0.5px] border-base-300 text-base-content/80 hover:bg-base-200 text-xs font-medium transition-colors"
                   >
                     Edit
                   </.link>
@@ -493,7 +498,7 @@ defmodule SwarmshieldWeb.Admin.RegisteredAgentsLive do
                     phx-click="regenerate_key"
                     phx-value-id={agent.id}
                     data-confirm="Regenerate API key? The current key will be invalidated immediately."
-                    class="px-3 py-1.5 rounded border border-blue-400/30 text-blue-400 hover:bg-blue-400/10 text-xs font-medium transition-colors"
+                    class="px-3 py-1.5 rounded border-[0.5px] border-info/30 text-info hover:bg-info/10 text-xs font-medium transition-colors"
                   >
                     Regen Key
                   </button>
@@ -503,7 +508,7 @@ defmodule SwarmshieldWeb.Admin.RegisteredAgentsLive do
                     phx-click="delete"
                     phx-value-id={agent.id}
                     data-confirm="Delete this agent? This action cannot be undone."
-                    class="px-3 py-1.5 rounded border border-red-400/30 text-red-400 hover:bg-red-400/10 text-xs font-medium transition-colors"
+                    class="px-3 py-1.5 rounded border-[0.5px] border-error/30 text-error hover:bg-error/10 text-xs font-medium transition-colors"
                   >
                     Delete
                   </button>
@@ -517,14 +522,14 @@ defmodule SwarmshieldWeb.Admin.RegisteredAgentsLive do
       <%!-- Empty state --%>
       <div
         :if={@total_count == 0}
-        class="flex flex-col items-center justify-center py-16 text-gray-500"
+        class="flex flex-col items-center justify-center py-16 text-base-content/50"
       >
-        <.icon name="hero-cpu-chip" class="size-12 mb-3 text-gray-600" />
+        <.icon name="hero-cpu-chip" class="size-12 mb-3 text-base-content/30" />
         <p class="text-sm">No registered agents</p>
         <.link
           :if={@has_create}
           patch={~p"/admin/registered-agents/new"}
-          class="mt-3 text-sm text-blue-400 hover:text-blue-300"
+          class="mt-3 text-sm text-info hover:text-blue-300"
         >
           Register your first agent
         </.link>
@@ -542,16 +547,16 @@ defmodule SwarmshieldWeb.Admin.RegisteredAgentsLive do
     <div>
       <.link
         patch={~p"/admin/registered-agents"}
-        class="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-300 mb-4"
+        class="inline-flex items-center gap-1 text-sm text-base-content/70 hover:text-base-content/80 mb-4"
       >
         <.icon name="hero-arrow-left" class="size-4" /> Back to agents
       </.link>
-      <h1 class="text-3xl font-bold text-gray-100">
+      <h1 class="text-3xl font-bold text-base-content">
         {if @action == :new, do: "Register Agent", else: "Edit Agent"}
       </h1>
     </div>
 
-    <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
+    <div class="bg-base-100 border-[0.5px] border-base-300 rounded-lg p-6">
       <.form
         for={@form}
         id="registered-agent-form"
@@ -614,14 +619,14 @@ defmodule SwarmshieldWeb.Admin.RegisteredAgentsLive do
         <div class="flex justify-end gap-3 pt-2">
           <.link
             patch={~p"/admin/registered-agents"}
-            class="inline-flex items-center h-[44px] px-6 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 text-sm font-medium transition-colors"
+            class="inline-flex items-center h-[44px] px-6 rounded-lg border-[0.5px] border-base-300 text-base-content/80 hover:bg-base-200 text-sm font-medium transition-colors"
           >
             Cancel
           </.link>
           <button
             type="submit"
             phx-disable-with="Saving..."
-            class="inline-flex items-center h-[44px] px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+            class="inline-flex items-center h-[44px] px-6 rounded-lg bg-primary hover:bg-primary/80 text-white text-sm font-medium transition-colors"
           >
             {if @action == :new, do: "Register Agent", else: "Save Changes"}
           </button>

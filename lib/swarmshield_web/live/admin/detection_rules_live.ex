@@ -386,20 +386,20 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
       <div class="space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 class="text-3xl font-bold text-gray-100">
+            <h1 class="text-3xl font-bold text-base-content">
               {if @live_action == :new, do: "New Detection Rule", else: "Edit Detection Rule"}
             </h1>
-            <p class="text-gray-400 mt-1">Configure pattern matching for event analysis</p>
+            <p class="text-base-content/70 mt-1">Configure pattern matching for event analysis</p>
           </div>
           <.link
             patch={~p"/admin/detection-rules"}
-            class="inline-flex items-center gap-2 h-[44px] px-4 rounded-lg border border-gray-600 text-sm text-gray-100 hover:bg-gray-800 transition-colors"
+            class="inline-flex items-center gap-2 h-[44px] px-4 rounded-lg border-[0.5px] border-base-300 text-sm text-base-content hover:bg-base-200 transition-colors"
           >
             <.icon name="hero-arrow-left" class="size-4" /> Back to Rules
           </.link>
         </div>
 
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
+        <div class="bg-base-100 border-[0.5px] border-base-300 rounded-lg p-6">
           <.form
             for={@form}
             id="detection-rule-form"
@@ -464,8 +464,11 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
             </div>
 
             <%!-- Regex pattern field --%>
-            <div :if={@selected_type == "regex"} class="border-t border-gray-700 pt-5 space-y-4">
-              <h3 class="text-sm font-semibold text-gray-300">Regex Pattern</h3>
+            <div
+              :if={@selected_type == "regex"}
+              class="border-t-[0.5px] border-base-300 pt-5 space-y-4"
+            >
+              <h3 class="text-sm font-semibold text-base-content/80">Regex Pattern</h3>
               <div>
                 <.input
                   field={@form[:pattern]}
@@ -475,13 +478,13 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
                   rows="3"
                   placeholder="e.g. \\b(password|secret|api_key)\\b"
                 />
-                <div :if={@regex_error} class="mt-1 text-sm text-red-400">
+                <div :if={@regex_error} class="mt-1 text-sm text-error">
                   {@regex_error}
                 </div>
               </div>
               <%!-- Regex preview --%>
-              <div class="bg-gray-900 border border-gray-600 rounded-lg p-4 space-y-3">
-                <label class="block text-sm font-medium text-gray-400">
+              <div class="bg-base-200 border-[0.5px] border-base-300 rounded-lg p-4 space-y-3">
+                <label class="block text-sm font-medium text-base-content/70">
                   Test Pattern (preview)
                 </label>
                 <input
@@ -491,7 +494,7 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
                   phx-value-input={@regex_preview_input}
                   phx-debounce="300"
                   placeholder="Enter sample text to test pattern..."
-                  class="w-full h-[44px] bg-gray-800 border border-gray-600 rounded-lg text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 px-3"
+                  class="w-full h-[44px] bg-base-100 border-[0.5px] border-base-300 rounded-lg text-base-content focus:border-primary focus:ring-1 focus:ring-primary px-3"
                 />
                 <div :if={@regex_preview_result}>
                   <.preview_result result={@regex_preview_result} />
@@ -500,10 +503,13 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
             </div>
 
             <%!-- Keyword list field --%>
-            <div :if={@selected_type == "keyword"} class="border-t border-gray-700 pt-5 space-y-3">
-              <h3 class="text-sm font-semibold text-gray-300">Keywords</h3>
+            <div
+              :if={@selected_type == "keyword"}
+              class="border-t-[0.5px] border-base-300 pt-5 space-y-3"
+            >
+              <h3 class="text-sm font-semibold text-base-content/80">Keywords</h3>
               <div>
-                <label class="block text-sm font-medium text-gray-300 mb-1">
+                <label class="block text-sm font-medium text-base-content/80 mb-1">
                   Keywords (comma or newline separated)
                 </label>
                 <textarea
@@ -511,34 +517,34 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
                   phx-debounce="300"
                   rows="5"
                   placeholder="password, secret, api_key&#10;bearer_token&#10;private_key"
-                  class="w-full bg-gray-900 border border-gray-600 rounded-lg text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 px-3 py-2"
+                  class="w-full bg-base-200 border-[0.5px] border-base-300 rounded-lg text-base-content focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2"
                 >{@keywords_text}</textarea>
-                <p class="text-xs text-gray-500 mt-1">
+                <p class="text-xs text-base-content/50 mt-1">
                   Enter keywords separated by commas or newlines
                 </p>
               </div>
             </div>
 
             <%!-- Semantic type info --%>
-            <div :if={@selected_type == "semantic"} class="border-t border-gray-700 pt-5">
-              <div class="bg-gray-900/50 border border-gray-600 rounded-lg p-4">
-                <p class="text-sm text-gray-400">
+            <div :if={@selected_type == "semantic"} class="border-t-[0.5px] border-base-300 pt-5">
+              <div class="bg-base-200/50 border-[0.5px] border-base-300 rounded-lg p-4">
+                <p class="text-sm text-base-content/70">
                   Semantic detection uses AI-powered analysis. No additional pattern configuration needed.
                 </p>
               </div>
             </div>
 
-            <div class="flex justify-end gap-3 pt-4 border-t border-gray-700">
+            <div class="flex justify-end gap-3 pt-4 border-t-[0.5px] border-base-300">
               <.link
                 patch={~p"/admin/detection-rules"}
-                class="inline-flex items-center h-[44px] px-6 rounded-lg border border-gray-600 text-sm text-gray-100 hover:bg-gray-700 transition-colors"
+                class="inline-flex items-center h-[44px] px-6 rounded-lg border-[0.5px] border-base-300 text-sm text-base-content hover:bg-base-200 transition-colors"
               >
                 Cancel
               </.link>
               <button
                 type="submit"
                 phx-disable-with="Saving..."
-                class="inline-flex items-center h-[44px] px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+                class="inline-flex items-center h-[44px] px-6 rounded-lg bg-primary hover:bg-primary/80 text-white text-sm font-medium transition-colors"
               >
                 <.icon name="hero-check" class="size-4 mr-2" />
                 {if @live_action == :new, do: "Create Rule", else: "Save Changes"}
@@ -567,18 +573,18 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
       <div class="space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 class="text-3xl font-bold text-gray-100">
-              <.icon name="hero-magnifying-glass" class="size-8 inline-block mr-1 text-blue-400" />
+            <h1 class="text-3xl font-bold text-base-content">
+              <.icon name="hero-magnifying-glass" class="size-8 inline-block mr-1 text-info" />
               Detection Rules
             </h1>
-            <p class="text-gray-400 mt-1">
+            <p class="text-base-content/70 mt-1">
               {@total_count} rule{if @total_count != 1, do: "s"} configured
             </p>
           </div>
           <.link
             :if={AuthHooks.has_socket_permission?(assigns, "policies:create")}
             patch={~p"/admin/detection-rules/new"}
-            class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+            class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-primary hover:bg-primary/80 text-white text-sm font-medium transition-colors"
           >
             <.icon name="hero-plus" class="size-4" /> New Rule
           </.link>
@@ -586,28 +592,28 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
 
         <div
           :if={@total_count > 0}
-          class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden"
+          class="bg-base-100 border-[0.5px] border-base-300 rounded-lg overflow-hidden"
         >
           <div class="overflow-x-auto">
             <table class="w-full">
-              <thead class="bg-gray-900 border-b border-gray-700">
+              <thead class="bg-base-200 border-b-[0.5px] border-base-300">
                 <tr>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider">
                     Name
                   </th>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider hidden sm:table-cell">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider hidden sm:table-cell">
                     Type
                   </th>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider hidden md:table-cell">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider hidden md:table-cell">
                     Category
                   </th>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider hidden md:table-cell">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider hidden md:table-cell">
                     Severity
                   </th>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider">
                     Status
                   </th>
-                  <th class="text-right px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th class="text-right px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -617,18 +623,18 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
                   :for={{dom_id, rule} <- @streams.rules}
                   id={dom_id}
                   class={[
-                    "border-b border-gray-700 transition-colors",
+                    "border-b-[0.5px] border-base-300 transition-colors",
                     if(rule.enabled,
-                      do: "hover:bg-gray-800/50",
-                      else: "opacity-50 hover:bg-gray-800/30"
+                      do: "hover:bg-base-200/30",
+                      else: "opacity-50 hover:bg-base-200/20"
                     )
                   ]}
                 >
                   <td class="px-6 py-4">
-                    <div class="font-medium text-sm text-gray-100">{rule.name}</div>
+                    <div class="font-medium text-sm text-base-content">{rule.name}</div>
                     <div
                       :if={rule.description}
-                      class="text-xs text-gray-500 truncate max-w-[200px]"
+                      class="text-xs text-base-content/50 truncate max-w-[200px]"
                     >
                       {rule.description}
                     </div>
@@ -637,8 +643,10 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
                     <.detection_type_badge type={rule.detection_type} />
                   </td>
                   <td class="px-6 py-4 hidden md:table-cell">
-                    <span :if={rule.category} class="text-sm text-gray-300">{rule.category}</span>
-                    <span :if={!rule.category} class="text-sm text-gray-500">—</span>
+                    <span :if={rule.category} class="text-sm text-base-content/80">
+                      {rule.category}
+                    </span>
+                    <span :if={!rule.category} class="text-sm text-base-content/50">—</span>
                   </td>
                   <td class="px-6 py-4 hidden md:table-cell">
                     <.severity_badge severity={rule.severity} />
@@ -662,7 +670,7 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
                       <.link
                         :if={AuthHooks.has_socket_permission?(assigns, "policies:update")}
                         patch={~p"/admin/detection-rules/#{rule.id}/edit"}
-                        class="inline-flex items-center h-[36px] px-4 text-sm rounded bg-gray-700 hover:bg-gray-600 text-gray-100 transition-colors"
+                        class="inline-flex items-center h-[36px] px-4 text-sm rounded bg-base-200 hover:bg-base-300 text-base-content transition-colors"
                       >
                         <.icon name="hero-pencil" class="size-3.5" />
                       </.link>
@@ -671,7 +679,7 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
                         phx-click="delete"
                         phx-value-id={rule.id}
                         data-confirm={"Delete rule \"#{rule.name}\"? This cannot be undone."}
-                        class="inline-flex items-center h-[36px] px-4 text-sm rounded border border-red-400/30 text-red-400 hover:bg-red-400/10 transition-colors"
+                        class="inline-flex items-center h-[36px] px-4 text-sm rounded border-[0.5px] border-error/30 text-error hover:bg-error/10 transition-colors"
                       >
                         <.icon name="hero-trash" class="size-3.5" />
                       </button>
@@ -686,14 +694,14 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
         <div
           :if={@total_count == 0}
           id="detection-rules-empty"
-          class="bg-gray-800 border border-gray-700 rounded-lg p-12 text-center"
+          class="bg-base-100 border-[0.5px] border-base-300 rounded-lg p-12 text-center"
         >
-          <.icon name="hero-magnifying-glass" class="size-12 mx-auto text-gray-600 mb-4" />
-          <p class="text-gray-400 mb-4">No detection rules configured</p>
+          <.icon name="hero-magnifying-glass" class="size-12 mx-auto text-base-content/30 mb-4" />
+          <p class="text-base-content/70 mb-4">No detection rules configured</p>
           <.link
             :if={AuthHooks.has_socket_permission?(assigns, "policies:create")}
             patch={~p"/admin/detection-rules/new"}
-            class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+            class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-primary hover:bg-primary/80 text-white text-sm font-medium transition-colors"
           >
             <.icon name="hero-plus" class="size-4" /> Create First Rule
           </.link>
@@ -713,7 +721,7 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
     assigns = assign(assigns, :text, text)
 
     ~H"""
-    <div class="flex items-center gap-2 text-sm text-green-400">
+    <div class="flex items-center gap-2 text-sm text-success">
       <.icon name="hero-check-circle" class="size-4" /> {@text}
     </div>
     """
@@ -723,7 +731,7 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
     assigns = assign(assigns, :text, text)
 
     ~H"""
-    <div class="flex items-center gap-2 text-sm text-yellow-400">
+    <div class="flex items-center gap-2 text-sm text-warning">
       <.icon name="hero-x-circle" class="size-4" /> {@text}
     </div>
     """
@@ -733,7 +741,7 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
     assigns = assign(assigns, :text, text)
 
     ~H"""
-    <div class="flex items-center gap-2 text-sm text-red-400">
+    <div class="flex items-center gap-2 text-sm text-error">
       <.icon name="hero-exclamation-triangle" class="size-4" /> {@text}
     </div>
     """
@@ -749,7 +757,7 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
 
   defp detection_type_badge(%{type: :regex} = assigns) do
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-400/20 text-purple-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent/20 text-accent">
       Regex
     </span>
     """
@@ -757,7 +765,7 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
 
   defp detection_type_badge(%{type: :keyword} = assigns) do
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-400/20 text-blue-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-info/20 text-info">
       Keyword
     </span>
     """
@@ -765,7 +773,7 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
 
   defp detection_type_badge(%{type: :semantic} = assigns) do
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-400/20 text-green-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success/20 text-success">
       Semantic
     </span>
     """
@@ -773,7 +781,7 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
 
   defp detection_type_badge(assigns) do
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-400/20 text-gray-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-base-content/10 text-base-content/70">
       {@type}
     </span>
     """
@@ -783,7 +791,7 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
 
   defp severity_badge(%{severity: :critical} = assigns) do
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-400/20 text-red-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-error/20 text-error">
       Critical
     </span>
     """
@@ -791,7 +799,7 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
 
   defp severity_badge(%{severity: :high} = assigns) do
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-400/20 text-yellow-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning/20 text-warning">
       High
     </span>
     """
@@ -799,7 +807,7 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
 
   defp severity_badge(%{severity: :medium} = assigns) do
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-400/20 text-blue-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-info/20 text-info">
       Medium
     </span>
     """
@@ -807,7 +815,7 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
 
   defp severity_badge(%{severity: :low} = assigns) do
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-400/20 text-gray-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-base-content/10 text-base-content/70">
       Low
     </span>
     """
@@ -815,7 +823,7 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
 
   defp severity_badge(assigns) do
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-400/20 text-gray-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-base-content/10 text-base-content/70">
       {@severity}
     </span>
     """
@@ -825,7 +833,7 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
 
   defp enabled_badge(%{enabled: true} = assigns) do
     ~H"""
-    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-400/20 text-green-400">
+    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-success/20 text-success">
       <.icon name="hero-check-circle" class="size-3" /> Enabled
     </span>
     """
@@ -833,7 +841,7 @@ defmodule SwarmshieldWeb.Admin.DetectionRulesLive do
 
   defp enabled_badge(assigns) do
     ~H"""
-    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-400/20 text-gray-400">
+    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-base-content/10 text-base-content/70">
       <.icon name="hero-x-circle" class="size-3" /> Disabled
     </span>
     """

@@ -319,24 +319,24 @@ defmodule SwarmshieldWeb.Admin.GhostProtocolConfigsLive do
       <div class="space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 class="text-3xl font-bold text-gray-100">
+            <h1 class="text-3xl font-bold text-base-content">
               {if @live_action == :new,
                 do: "New GhostProtocol Config",
                 else: "Edit GhostProtocol Config"}
             </h1>
-            <p class="text-gray-400 mt-1">
+            <p class="text-base-content/70 mt-1">
               Configure ephemeral agent lifecycle and data wipe policies
             </p>
           </div>
           <.link
             patch={~p"/admin/ghost-protocol-configs"}
-            class="inline-flex items-center gap-2 h-[44px] px-4 rounded-lg border border-gray-600 text-sm text-gray-100 hover:bg-gray-800 transition-colors"
+            class="inline-flex items-center gap-2 h-[44px] px-4 rounded-lg border-[0.5px] border-base-300 text-sm text-base-content hover:bg-base-200 transition-colors"
           >
             <.icon name="hero-arrow-left" class="size-4" /> Back to Configs
           </.link>
         </div>
 
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
+        <div class="bg-base-100 border-[0.5px] border-base-300 rounded-lg p-6">
           <.form
             for={@form}
             id="ghost-protocol-config-form"
@@ -400,12 +400,12 @@ defmodule SwarmshieldWeb.Admin.GhostProtocolConfigsLive do
                 phx-debounce="300"
                 required
               />
-              <p class="text-xs text-gray-500 mt-1">10s to 3600s (1 hour)</p>
+              <p class="text-xs text-base-content/50 mt-1">10s to 3600s (1 hour)</p>
             </div>
 
             <%!-- Wipe Fields --%>
             <div class="space-y-2">
-              <label class="block text-sm font-medium text-gray-300">
+              <label class="block text-sm font-medium text-base-content/80">
                 Fields to Wipe
               </label>
               <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
@@ -415,10 +415,11 @@ defmodule SwarmshieldWeb.Admin.GhostProtocolConfigsLive do
                   phx-click="toggle_wipe_field"
                   phx-value-field={field}
                   class={[
-                    "flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors cursor-pointer",
+                    "flex items-center gap-2 px-3 py-2 rounded-lg border-[0.5px] text-sm transition-colors cursor-pointer",
                     if(field in @selected_wipe_fields,
-                      do: "border-red-400/50 bg-red-400/10 text-red-400",
-                      else: "border-gray-600 bg-gray-900 text-gray-400 hover:border-gray-500"
+                      do: "border-error/50 bg-error/10 text-error",
+                      else:
+                        "border-base-300 bg-base-200 text-base-content/70 hover:border-base-content/50"
                     )
                   ]}
                 >
@@ -436,12 +437,12 @@ defmodule SwarmshieldWeb.Admin.GhostProtocolConfigsLive do
             </div>
 
             <%!-- Security toggles --%>
-            <div class="border-t border-gray-700 pt-5 space-y-4">
-              <h3 class="text-sm font-semibold text-gray-300">Security Options</h3>
+            <div class="border-t-[0.5px] border-base-300 pt-5 space-y-4">
+              <h3 class="text-sm font-semibold text-base-content/80">Security Options</h3>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="flex items-start gap-3">
                   <.input field={@form[:crypto_shred]} type="checkbox" label="Crypto Shred" />
-                  <p class="text-xs text-gray-500 mt-1">
+                  <p class="text-xs text-base-content/50 mt-1">
                     Overwrites data with random bytes before nulling
                   </p>
                 </div>
@@ -472,33 +473,33 @@ defmodule SwarmshieldWeb.Admin.GhostProtocolConfigsLive do
             </div>
 
             <%!-- Wipe preview --%>
-            <div class="bg-gray-900/50 border border-gray-600 rounded-lg p-4">
-              <h4 class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+            <div class="bg-base-200/50 border-[0.5px] border-base-300 rounded-lg p-4">
+              <h4 class="text-xs font-medium text-base-content/70 uppercase tracking-wider mb-2">
                 Wipe Behavior Preview
               </h4>
-              <p class="text-sm text-gray-300">
+              <p class="text-sm text-base-content/80">
                 When a session completes:
-                <span :if={@selected_wipe_fields != []} class="text-red-400 font-medium">
+                <span :if={@selected_wipe_fields != []} class="text-error font-medium">
                   {Enum.join(@selected_wipe_fields, ", ")}
                 </span>
-                <span :if={@selected_wipe_fields == []} class="text-gray-500">
+                <span :if={@selected_wipe_fields == []} class="text-base-content/50">
                   (no fields selected)
                 </span>
                 will be
                 <span
                   :if={@form[:crypto_shred].value == true or @form[:crypto_shred].value == "true"}
-                  class="text-yellow-400 font-medium"
+                  class="text-warning font-medium"
                 >
                   crypto shredded and
                 </span>
                 wiped
-                <span :if={@selected_strategy == "immediate"} class="text-red-400 font-medium">
+                <span :if={@selected_strategy == "immediate"} class="text-error font-medium">
                   immediately
                 </span>
-                <span :if={@selected_strategy == "delayed"} class="text-yellow-400 font-medium">
+                <span :if={@selected_strategy == "delayed"} class="text-warning font-medium">
                   after {@form[:wipe_delay_seconds].value || 0} seconds
                 </span>
-                <span :if={@selected_strategy == "scheduled"} class="text-blue-400 font-medium">
+                <span :if={@selected_strategy == "scheduled"} class="text-info font-medium">
                   on schedule after {@form[:wipe_delay_seconds].value || 0} seconds
                 </span>.
                 Verdict and audit trail will be retained.
@@ -509,17 +510,17 @@ defmodule SwarmshieldWeb.Admin.GhostProtocolConfigsLive do
               <.input field={@form[:enabled]} type="checkbox" label="Enabled" />
             </div>
 
-            <div class="flex justify-end gap-3 pt-4 border-t border-gray-700">
+            <div class="flex justify-end gap-3 pt-4 border-t-[0.5px] border-base-300">
               <.link
                 patch={~p"/admin/ghost-protocol-configs"}
-                class="inline-flex items-center h-[44px] px-6 rounded-lg border border-gray-600 text-sm text-gray-100 hover:bg-gray-700 transition-colors"
+                class="inline-flex items-center h-[44px] px-6 rounded-lg border-[0.5px] border-base-300 text-sm text-base-content hover:bg-base-200 transition-colors"
               >
                 Cancel
               </.link>
               <button
                 type="submit"
                 phx-disable-with="Saving..."
-                class="inline-flex items-center h-[44px] px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+                class="inline-flex items-center h-[44px] px-6 rounded-lg bg-primary hover:bg-primary/80 text-white text-sm font-medium transition-colors"
               >
                 <.icon name="hero-check" class="size-4 mr-2" />
                 {if @live_action == :new, do: "Create Config", else: "Save Changes"}
@@ -548,18 +549,18 @@ defmodule SwarmshieldWeb.Admin.GhostProtocolConfigsLive do
       <div class="space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 class="text-3xl font-bold text-gray-100">
-              <.icon name="hero-eye-slash" class="size-8 inline-block mr-1 text-red-400" />
+            <h1 class="text-3xl font-bold text-base-content">
+              <.icon name="hero-eye-slash" class="size-8 inline-block mr-1 text-error" />
               GhostProtocol Configs
             </h1>
-            <p class="text-gray-400 mt-1">
+            <p class="text-base-content/70 mt-1">
               {@total_count} config{if @total_count != 1, do: "s"} configured
             </p>
           </div>
           <.link
             :if={AuthHooks.has_socket_permission?(assigns, "ghost_protocol:create")}
             patch={~p"/admin/ghost-protocol-configs/new"}
-            class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+            class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-primary hover:bg-primary/80 text-white text-sm font-medium transition-colors"
           >
             <.icon name="hero-plus" class="size-4" /> New Config
           </.link>
@@ -567,28 +568,28 @@ defmodule SwarmshieldWeb.Admin.GhostProtocolConfigsLive do
 
         <div
           :if={@total_count > 0}
-          class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden"
+          class="bg-base-100 border-[0.5px] border-base-300 rounded-lg overflow-hidden"
         >
           <div class="overflow-x-auto">
             <table class="w-full">
-              <thead class="bg-gray-900 border-b border-gray-700">
+              <thead class="bg-base-200 border-b-[0.5px] border-base-300">
                 <tr>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider">
                     Name
                   </th>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider hidden sm:table-cell">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider hidden sm:table-cell">
                     Strategy
                   </th>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider hidden md:table-cell">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider hidden md:table-cell">
                     Crypto Shred
                   </th>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider hidden lg:table-cell">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider hidden lg:table-cell">
                     Workflows
                   </th>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider">
                     Status
                   </th>
-                  <th class="text-right px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th class="text-right px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -598,16 +599,16 @@ defmodule SwarmshieldWeb.Admin.GhostProtocolConfigsLive do
                   :for={{dom_id, cfg} <- @streams.configs}
                   id={dom_id}
                   class={[
-                    "border-b border-gray-700 transition-colors",
+                    "border-b-[0.5px] border-base-300 transition-colors",
                     if(cfg.enabled,
-                      do: "hover:bg-gray-800/50",
-                      else: "opacity-50 hover:bg-gray-800/30"
+                      do: "hover:bg-base-200/30",
+                      else: "opacity-50 hover:bg-base-200/20"
                     )
                   ]}
                 >
                   <td class="px-6 py-4">
-                    <div class="font-medium text-sm text-gray-100">{cfg.name}</div>
-                    <div class="text-xs text-gray-500">{cfg.slug}</div>
+                    <div class="font-medium text-sm text-base-content">{cfg.name}</div>
+                    <div class="text-xs text-base-content/50">{cfg.slug}</div>
                   </td>
                   <td class="px-6 py-4 hidden sm:table-cell">
                     <.strategy_badge strategy={cfg.wipe_strategy} delay={cfg.wipe_delay_seconds} />
@@ -616,7 +617,7 @@ defmodule SwarmshieldWeb.Admin.GhostProtocolConfigsLive do
                     <.crypto_shred_indicator enabled={cfg.crypto_shred} />
                   </td>
                   <td class="px-6 py-4 hidden lg:table-cell">
-                    <span class="text-sm text-gray-300">{length(cfg.workflows || [])}</span>
+                    <span class="text-sm text-base-content/80">{length(cfg.workflows || [])}</span>
                   </td>
                   <td class="px-6 py-4">
                     <button
@@ -637,7 +638,7 @@ defmodule SwarmshieldWeb.Admin.GhostProtocolConfigsLive do
                       <.link
                         :if={AuthHooks.has_socket_permission?(assigns, "ghost_protocol:update")}
                         patch={~p"/admin/ghost-protocol-configs/#{cfg.id}/edit"}
-                        class="inline-flex items-center h-[36px] px-4 text-sm rounded bg-gray-700 hover:bg-gray-600 text-gray-100 transition-colors"
+                        class="inline-flex items-center h-[36px] px-4 text-sm rounded bg-base-200 hover:bg-base-300 text-base-content transition-colors"
                       >
                         <.icon name="hero-pencil" class="size-3.5" />
                       </.link>
@@ -646,7 +647,7 @@ defmodule SwarmshieldWeb.Admin.GhostProtocolConfigsLive do
                         phx-click="delete"
                         phx-value-id={cfg.id}
                         data-confirm={"Delete config \"#{cfg.name}\"? This cannot be undone."}
-                        class="inline-flex items-center h-[36px] px-4 text-sm rounded border border-red-400/30 text-red-400 hover:bg-red-400/10 transition-colors"
+                        class="inline-flex items-center h-[36px] px-4 text-sm rounded border-[0.5px] border-error/30 text-error hover:bg-error/10 transition-colors"
                       >
                         <.icon name="hero-trash" class="size-3.5" />
                       </button>
@@ -661,14 +662,14 @@ defmodule SwarmshieldWeb.Admin.GhostProtocolConfigsLive do
         <div
           :if={@total_count == 0}
           id="ghost-protocol-configs-empty"
-          class="bg-gray-800 border border-gray-700 rounded-lg p-12 text-center"
+          class="bg-base-100 border-[0.5px] border-base-300 rounded-lg p-12 text-center"
         >
-          <.icon name="hero-eye-slash" class="size-12 mx-auto text-gray-600 mb-4" />
-          <p class="text-gray-400 mb-4">No GhostProtocol configs</p>
+          <.icon name="hero-eye-slash" class="size-12 mx-auto text-base-content/30 mb-4" />
+          <p class="text-base-content/70 mb-4">No GhostProtocol configs</p>
           <.link
             :if={AuthHooks.has_socket_permission?(assigns, "ghost_protocol:create")}
             patch={~p"/admin/ghost-protocol-configs/new"}
-            class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+            class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-primary hover:bg-primary/80 text-white text-sm font-medium transition-colors"
           >
             <.icon name="hero-plus" class="size-4" /> Create First Config
           </.link>
@@ -687,7 +688,7 @@ defmodule SwarmshieldWeb.Admin.GhostProtocolConfigsLive do
 
   defp strategy_badge(%{strategy: :immediate} = assigns) do
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-400/20 text-red-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-error/20 text-error">
       Immediate
     </span>
     """
@@ -695,7 +696,7 @@ defmodule SwarmshieldWeb.Admin.GhostProtocolConfigsLive do
 
   defp strategy_badge(%{strategy: :delayed} = assigns) do
     ~H"""
-    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-400/20 text-yellow-400">
+    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning/20 text-warning">
       Delayed ({@delay}s)
     </span>
     """
@@ -703,7 +704,7 @@ defmodule SwarmshieldWeb.Admin.GhostProtocolConfigsLive do
 
   defp strategy_badge(%{strategy: :scheduled} = assigns) do
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-400/20 text-blue-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-info/20 text-info">
       Scheduled ({@delay}s)
     </span>
     """
@@ -711,7 +712,7 @@ defmodule SwarmshieldWeb.Admin.GhostProtocolConfigsLive do
 
   defp strategy_badge(assigns) do
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-400/20 text-gray-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-base-content/10 text-base-content/70">
       {to_string(@strategy)}
     </span>
     """
@@ -721,7 +722,7 @@ defmodule SwarmshieldWeb.Admin.GhostProtocolConfigsLive do
 
   defp crypto_shred_indicator(%{enabled: true} = assigns) do
     ~H"""
-    <span class="inline-flex items-center gap-1 text-sm text-yellow-400">
+    <span class="inline-flex items-center gap-1 text-sm text-warning">
       <.icon name="hero-shield-check" class="size-4" /> Active
     </span>
     """
@@ -729,13 +730,13 @@ defmodule SwarmshieldWeb.Admin.GhostProtocolConfigsLive do
 
   defp crypto_shred_indicator(assigns) do
     ~H"""
-    <span class="text-sm text-gray-500">&mdash;</span>
+    <span class="text-sm text-base-content/50">&mdash;</span>
     """
   end
 
   defp enabled_badge(%{enabled: true} = assigns) do
     ~H"""
-    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-400/20 text-green-400">
+    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-success/20 text-success">
       <.icon name="hero-check-circle" class="size-3" /> Enabled
     </span>
     """
@@ -743,7 +744,7 @@ defmodule SwarmshieldWeb.Admin.GhostProtocolConfigsLive do
 
   defp enabled_badge(assigns) do
     ~H"""
-    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-400/20 text-gray-400">
+    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-base-content/10 text-base-content/70">
       <.icon name="hero-x-circle" class="size-3" /> Disabled
     </span>
     """

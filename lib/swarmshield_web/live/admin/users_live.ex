@@ -196,11 +196,11 @@ defmodule SwarmshieldWeb.Admin.UsersLive do
 
   defp role_badge_class(role_name) do
     case role_name do
-      "super_admin" -> "bg-purple-400/10 text-purple-400 border border-purple-400/30"
-      "admin" -> "bg-blue-400/10 text-blue-400 border border-blue-400/30"
-      "analyst" -> "bg-green-400/10 text-green-400 border border-green-400/30"
-      "viewer" -> "bg-gray-400/10 text-gray-400 border border-gray-400/30"
-      _ -> "bg-gray-400/10 text-gray-400 border border-gray-400/30"
+      "super_admin" -> "bg-accent/10 text-accent border-[0.5px] border-accent/30"
+      "admin" -> "bg-info/10 text-info border-[0.5px] border-info/30"
+      "analyst" -> "bg-success/10 text-success border-[0.5px] border-success/30"
+      "viewer" -> "bg-base-content/10 text-base-content/70 border-[0.5px] border-base-content/30"
+      _ -> "bg-base-content/10 text-base-content/70 border-[0.5px] border-base-content/30"
     end
   end
 
@@ -232,21 +232,21 @@ defmodule SwarmshieldWeb.Admin.UsersLive do
       <div class="space-y-6">
         <div class="flex items-center justify-between">
           <div>
-            <h1 class="text-3xl font-bold text-gray-100">
-              <.icon name="hero-users" class="size-8 inline-block mr-1 text-blue-400" /> Manage Users
+            <h1 class="text-3xl font-bold text-base-content">
+              <.icon name="hero-users" class="size-8 inline-block mr-1 text-info" /> Manage Users
             </h1>
-            <p class="text-gray-400 mt-1">
+            <p class="text-base-content/70 mt-1">
               {@total_count} member(s) in this workspace
             </p>
           </div>
         </div>
 
         <%!-- Members table --%>
-        <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+        <div class="bg-base-100 border-[0.5px] border-base-300 rounded-lg overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full min-w-[600px]">
               <thead>
-                <tr class="border-b border-gray-700 text-left text-sm text-gray-400">
+                <tr class="border-b-[0.5px] border-base-300 text-left text-sm text-base-content/70">
                   <th class="px-6 py-3 font-medium">Email</th>
                   <th class="px-6 py-3 font-medium">Role</th>
                   <th class="px-6 py-3 font-medium">Joined</th>
@@ -257,18 +257,18 @@ defmodule SwarmshieldWeb.Admin.UsersLive do
                 <tr
                   :for={{dom_id, member} <- @streams.members}
                   id={dom_id}
-                  class="border-b border-gray-700/50 hover:bg-gray-700/30 transition-colors"
+                  class="border-b-[0.5px] border-base-300 hover:bg-base-200/30 transition-colors"
                 >
                   <td class="px-6 py-4">
                     <div class="flex items-center gap-3">
-                      <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-sm font-medium text-gray-300">
+                      <div class="w-8 h-8 rounded-full bg-base-200 flex items-center justify-center text-sm font-medium text-base-content/80">
                         {String.first(member.user.email) |> String.upcase()}
                       </div>
                       <div>
-                        <p class="text-sm text-gray-100">{member.user.email}</p>
+                        <p class="text-sm text-base-content">{member.user.email}</p>
                         <p
                           :if={member.user_id == @current_scope.user.id}
-                          class="text-xs text-blue-400"
+                          class="text-xs text-info"
                         >
                           You
                         </p>
@@ -280,7 +280,7 @@ defmodule SwarmshieldWeb.Admin.UsersLive do
                       {member.role.name}
                     </span>
                   </td>
-                  <td class="px-6 py-4 text-sm text-gray-400">
+                  <td class="px-6 py-4 text-sm text-base-content/70">
                     {format_datetime(member.inserted_at)}
                   </td>
                   <td class="px-6 py-4 text-right">
@@ -292,7 +292,7 @@ defmodule SwarmshieldWeb.Admin.UsersLive do
                         <input type="hidden" name="uwr_id" value={member.id} />
                         <select
                           name="role_id"
-                          class="h-[34px] bg-gray-900 border border-gray-600 rounded text-gray-100 text-xs px-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                          class="h-[34px] bg-base-200 border-[0.5px] border-base-300 rounded text-base-content text-xs px-2 focus:border-primary focus:ring-1 focus:ring-primary"
                         >
                           <option
                             :for={role <- @roles}
@@ -308,14 +308,14 @@ defmodule SwarmshieldWeb.Admin.UsersLive do
                         phx-click="remove_user"
                         phx-value-user_id={member.user_id}
                         data-confirm={"Remove #{member.user.email} from this workspace? They will lose all access."}
-                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded border border-red-400/30 text-red-400 hover:bg-red-400/10 text-xs font-medium transition-colors"
+                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded border-[0.5px] border-error/30 text-error hover:bg-error/10 text-xs font-medium transition-colors"
                       >
                         <.icon name="hero-x-mark" class="size-3.5" /> Remove
                       </button>
                     </div>
                     <span
                       :if={!can_manage_user?(assigns, member)}
-                      class="text-xs text-gray-500"
+                      class="text-xs text-base-content/50"
                     >
                       —
                     </span>
@@ -328,9 +328,9 @@ defmodule SwarmshieldWeb.Admin.UsersLive do
           <%!-- Empty state --%>
           <div
             :if={@total_count == 0}
-            class="flex flex-col items-center justify-center py-16 text-gray-500"
+            class="flex flex-col items-center justify-center py-16 text-base-content/50"
           >
-            <.icon name="hero-users" class="size-12 mb-3 text-gray-600" />
+            <.icon name="hero-users" class="size-12 mb-3 text-base-content/30" />
             <p class="text-sm">No users in this workspace</p>
           </div>
         </div>

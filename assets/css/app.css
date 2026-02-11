@@ -102,4 +102,22 @@
 /* Make LiveView wrapper divs transparent for layout */
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
-/* This file is for your main application CSS */
+/* ============================================================
+   SwarmShield Global Styles
+   Clean flat design — no shadows, half-pixel borders, 44px inputs
+   ============================================================ */
+
+/* No box-shadows anywhere — clean flat design */
+.card, .btn, .input, .select, .textarea {
+  box-shadow: none !important;
+}
+
+/* Half-pixel borders on cards for refined look */
+.card {
+  border-width: 0.5px;
+}
+
+/* Consistent 44px form field heights */
+.input, .select, .textarea {
+  height: 44px;
+}

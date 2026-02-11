@@ -382,17 +382,11 @@ defmodule SwarmshieldWeb.DashboardLive do
     <div
       id={@id}
       class={[
-        "group relative overflow-hidden rounded-xl border border-base-300/50",
+        "group rounded-xl border-[0.5px] border-base-300",
         "bg-base-100 p-5 transition-all duration-200",
-        color_hover(@color)
+        "hover:border-base-content/20"
       ]}
     >
-      <%!-- Subtle gradient accent at top --%>
-      <div class={[
-        "absolute inset-x-0 top-0 h-[2px]",
-        color_gradient(@color)
-      ]} />
-
       <div class="flex items-start justify-between">
         <div class="space-y-2">
           <p class="text-xs font-medium uppercase tracking-wider text-base-content/50">
@@ -421,7 +415,7 @@ defmodule SwarmshieldWeb.DashboardLive do
 
   defp stat_skeleton(assigns) do
     ~H"""
-    <div class="rounded-xl border border-base-300/50 bg-base-100 p-5 animate-pulse">
+    <div class="rounded-xl border-[0.5px] border-base-300 bg-base-100 p-5 animate-pulse">
       <div class="flex items-start justify-between">
         <div class="space-y-3">
           <div class="h-3 w-20 rounded bg-base-300/50" />
@@ -444,7 +438,7 @@ defmodule SwarmshieldWeb.DashboardLive do
     <.link
       navigate={@path}
       class={[
-        "group flex items-center gap-3 rounded-xl border border-base-300/50",
+        "group flex items-center gap-3 rounded-xl border-[0.5px] border-base-300",
         "bg-base-100 px-4 py-3 transition-all duration-200",
         "hover:border-primary/30 hover:bg-base-200/50"
       ]}
@@ -470,16 +464,6 @@ defmodule SwarmshieldWeb.DashboardLive do
   # -------------------------------------------------------------------
   # Color helpers (return Tailwind classes)
   # -------------------------------------------------------------------
-
-  defp color_gradient("info"), do: "bg-gradient-to-r from-info/80 to-info/20"
-  defp color_gradient("warning"), do: "bg-gradient-to-r from-warning/80 to-warning/20"
-  defp color_gradient("error"), do: "bg-gradient-to-r from-error/80 to-error/20"
-  defp color_gradient("success"), do: "bg-gradient-to-r from-success/80 to-success/20"
-  defp color_gradient("primary"), do: "bg-gradient-to-r from-primary/80 to-primary/20"
-  defp color_gradient("accent"), do: "bg-gradient-to-r from-accent/80 to-accent/20"
-  defp color_gradient("secondary"), do: "bg-gradient-to-r from-secondary/80 to-secondary/20"
-  defp color_gradient("neutral"), do: "bg-gradient-to-r from-neutral/80 to-neutral/20"
-  defp color_gradient(_), do: "bg-gradient-to-r from-base-300 to-base-200"
 
   defp color_text("info"), do: "text-info"
   defp color_text("warning"), do: "text-warning"
@@ -507,29 +491,6 @@ defmodule SwarmshieldWeb.DashboardLive do
   defp color_icon("accent"), do: "text-accent"
   defp color_icon("secondary"), do: "text-secondary"
   defp color_icon(_), do: "text-base-content/60"
-
-  defp color_hover("info"), do: "hover:border-info/30 hover:shadow-lg hover:shadow-info/5"
-
-  defp color_hover("warning"),
-    do: "hover:border-warning/30 hover:shadow-lg hover:shadow-warning/5"
-
-  defp color_hover("error"), do: "hover:border-error/30 hover:shadow-lg hover:shadow-error/5"
-
-  defp color_hover("success"),
-    do: "hover:border-success/30 hover:shadow-lg hover:shadow-success/5"
-
-  defp color_hover("primary"),
-    do: "hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5"
-
-  defp color_hover("accent"), do: "hover:border-accent/30 hover:shadow-lg hover:shadow-accent/5"
-
-  defp color_hover("secondary"),
-    do: "hover:border-secondary/30 hover:shadow-lg hover:shadow-secondary/5"
-
-  defp color_hover("neutral"),
-    do: "hover:border-neutral/30 hover:shadow-lg hover:shadow-neutral/5"
-
-  defp color_hover(_), do: "hover:border-base-300 hover:shadow-lg"
 
   defp format_number(n) when is_integer(n) and n >= 1_000_000 do
     "#{Float.round(n / 1_000_000, 1)}M"

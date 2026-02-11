@@ -397,22 +397,22 @@ defmodule SwarmshieldWeb.Admin.PoliciesLive do
       <div class="space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 class="text-3xl font-bold text-gray-100">
+            <h1 class="text-3xl font-bold text-base-content">
               {if @live_action == :new, do: "New Consensus Policy", else: "Edit Consensus Policy"}
             </h1>
-            <p class="text-gray-400 mt-1">
+            <p class="text-base-content/70 mt-1">
               Configure voting strategy for deliberation verdicts
             </p>
           </div>
           <.link
             patch={~p"/admin/consensus-policies"}
-            class="inline-flex items-center gap-2 h-[44px] px-4 rounded-lg border border-gray-600 text-sm text-gray-100 hover:bg-gray-800 transition-colors"
+            class="inline-flex items-center gap-2 h-[44px] px-4 rounded-lg border-[0.5px] border-base-300 text-sm text-base-content hover:bg-base-200 transition-colors"
           >
             <.icon name="hero-arrow-left" class="size-4" /> Back to Policies
           </.link>
         </div>
 
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
+        <div class="bg-base-100 border-[0.5px] border-base-300 rounded-lg p-6">
           <.form
             for={@form}
             id="policy-form"
@@ -463,17 +463,17 @@ defmodule SwarmshieldWeb.Admin.PoliciesLive do
                 min="0"
                 max="1"
               />
-              <p class="text-xs text-gray-500 mt-1">
+              <p class="text-xs text-base-content/50 mt-1">
                 {threshold_help(@selected_strategy)}
               </p>
             </div>
 
             <%!-- Weights: shown for weighted strategy --%>
             <div :if={@selected_strategy == "weighted"} class="space-y-3">
-              <label class="block text-sm font-medium text-gray-300">
+              <label class="block text-sm font-medium text-base-content/80">
                 Agent Weights
               </label>
-              <p class="text-xs text-gray-500 mb-2">
+              <p class="text-xs text-base-content/50 mb-2">
                 Assign voting weights to agent roles. Higher weights = more influence.
               </p>
 
@@ -490,7 +490,7 @@ defmodule SwarmshieldWeb.Admin.PoliciesLive do
                     phx-value-index={index}
                     phx-value-field="key"
                     phx-debounce="300"
-                    class="flex-1 h-[44px] bg-gray-900 border border-gray-600 rounded-lg text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 px-3"
+                    class="flex-1 h-[44px] bg-base-200 border-[0.5px] border-base-300 rounded-lg text-base-content focus:border-primary focus:ring-1 focus:ring-primary px-3"
                   />
                   <input
                     type="number"
@@ -502,13 +502,13 @@ defmodule SwarmshieldWeb.Admin.PoliciesLive do
                     phx-value-index={index}
                     phx-value-field="value"
                     phx-debounce="300"
-                    class="w-24 sm:w-32 h-[44px] bg-gray-900 border border-gray-600 rounded-lg text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 px-3"
+                    class="w-24 sm:w-32 h-[44px] bg-base-200 border-[0.5px] border-base-300 rounded-lg text-base-content focus:border-primary focus:ring-1 focus:ring-primary px-3"
                   />
                   <button
                     type="button"
                     phx-click="remove_weight"
                     phx-value-index={index}
-                    class="h-[44px] px-3 rounded-lg border border-red-400/30 text-red-400 hover:bg-red-400/10 transition-colors"
+                    class="h-[44px] px-3 rounded-lg border-[0.5px] border-error/30 text-error hover:bg-error/10 transition-colors"
                   >
                     <.icon name="hero-trash" class="size-4" />
                   </button>
@@ -518,7 +518,7 @@ defmodule SwarmshieldWeb.Admin.PoliciesLive do
               <button
                 type="button"
                 phx-click="add_weight"
-                class="inline-flex items-center gap-1 h-[36px] px-4 text-sm rounded border border-gray-600 text-gray-300 hover:bg-gray-700 transition-colors"
+                class="inline-flex items-center gap-1 h-[36px] px-4 text-sm rounded border-[0.5px] border-base-300 text-base-content/80 hover:bg-base-200 transition-colors"
               >
                 <.icon name="hero-plus" class="size-3.5" /> Add Weight
               </button>
@@ -526,7 +526,7 @@ defmodule SwarmshieldWeb.Admin.PoliciesLive do
 
             <%!-- Require unanimous on: shown for all strategies --%>
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-1">
+              <label class="block text-sm font-medium text-base-content/80 mb-1">
                 Require Unanimous On
               </label>
               <input
@@ -535,9 +535,9 @@ defmodule SwarmshieldWeb.Admin.PoliciesLive do
                 placeholder="e.g. critical_security, data_breach"
                 phx-blur="update_unanimous_text"
                 phx-debounce="300"
-                class="w-full h-[44px] bg-gray-900 border border-gray-600 rounded-lg text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 px-3"
+                class="w-full h-[44px] bg-base-200 border-[0.5px] border-base-300 rounded-lg text-base-content focus:border-primary focus:ring-1 focus:ring-primary px-3"
               />
-              <p class="text-xs text-gray-500 mt-1">
+              <p class="text-xs text-base-content/50 mt-1">
                 Comma-separated categories that always require unanimous vote regardless of strategy
               </p>
             </div>
@@ -550,17 +550,17 @@ defmodule SwarmshieldWeb.Admin.PoliciesLive do
               />
             </div>
 
-            <div class="flex justify-end gap-3 pt-4 border-t border-gray-700">
+            <div class="flex justify-end gap-3 pt-4 border-t-[0.5px] border-base-300">
               <.link
                 patch={~p"/admin/consensus-policies"}
-                class="inline-flex items-center h-[44px] px-6 rounded-lg border border-gray-600 text-sm text-gray-100 hover:bg-gray-700 transition-colors"
+                class="inline-flex items-center h-[44px] px-6 rounded-lg border-[0.5px] border-base-300 text-sm text-base-content hover:bg-base-200 transition-colors"
               >
                 Cancel
               </.link>
               <button
                 type="submit"
                 phx-disable-with="Saving..."
-                class="inline-flex items-center h-[44px] px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+                class="inline-flex items-center h-[44px] px-6 rounded-lg bg-primary hover:bg-primary/80 text-white text-sm font-medium transition-colors"
               >
                 <.icon name="hero-check" class="size-4 mr-2" />
                 {if @live_action == :new, do: "Create Policy", else: "Save Changes"}
@@ -590,18 +590,18 @@ defmodule SwarmshieldWeb.Admin.PoliciesLive do
         <%!-- Header --%>
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 class="text-3xl font-bold text-gray-100">
-              <.icon name="hero-scale" class="size-8 inline-block mr-1 text-blue-400" />
+            <h1 class="text-3xl font-bold text-base-content">
+              <.icon name="hero-scale" class="size-8 inline-block mr-1 text-info" />
               Consensus Policies
             </h1>
-            <p class="text-gray-400 mt-1">
+            <p class="text-base-content/70 mt-1">
               {@total_count} polic{if @total_count == 1, do: "y", else: "ies"} configured
             </p>
           </div>
           <.link
             :if={AuthHooks.has_socket_permission?(assigns, "policies:create")}
             patch={~p"/admin/consensus-policies/new"}
-            class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+            class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-primary hover:bg-primary/80 text-white text-sm font-medium transition-colors"
           >
             <.icon name="hero-plus" class="size-4" /> New Policy
           </.link>
@@ -610,25 +610,25 @@ defmodule SwarmshieldWeb.Admin.PoliciesLive do
         <%!-- Policy List --%>
         <div
           :if={@total_count > 0}
-          class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden"
+          class="bg-base-100 border-[0.5px] border-base-300 rounded-lg overflow-hidden"
         >
           <div class="overflow-x-auto">
             <table class="w-full">
-              <thead class="bg-gray-900 border-b border-gray-700">
+              <thead class="bg-base-200 border-b-[0.5px] border-base-300">
                 <tr>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider">
                     Name
                   </th>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider hidden sm:table-cell">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider hidden sm:table-cell">
                     Strategy
                   </th>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider hidden md:table-cell">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider hidden md:table-cell">
                     Threshold
                   </th>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider">
                     Status
                   </th>
-                  <th class="text-right px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th class="text-right px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -637,13 +637,13 @@ defmodule SwarmshieldWeb.Admin.PoliciesLive do
                 <tr
                   :for={{dom_id, policy} <- @streams.policies}
                   id={dom_id}
-                  class="border-b border-gray-700 hover:bg-gray-800/50 transition-colors"
+                  class="border-b-[0.5px] border-base-300 hover:bg-base-200/30 transition-colors"
                 >
                   <td class="px-6 py-4">
-                    <div class="font-medium text-sm text-gray-100">{policy.name}</div>
+                    <div class="font-medium text-sm text-base-content">{policy.name}</div>
                     <div
                       :if={policy.description}
-                      class="text-xs text-gray-500 truncate max-w-[200px]"
+                      class="text-xs text-base-content/50 truncate max-w-[200px]"
                     >
                       {policy.description}
                     </div>
@@ -673,7 +673,7 @@ defmodule SwarmshieldWeb.Admin.PoliciesLive do
                       <.link
                         :if={AuthHooks.has_socket_permission?(assigns, "policies:update")}
                         patch={~p"/admin/consensus-policies/#{policy.id}/edit"}
-                        class="inline-flex items-center h-[36px] px-4 text-sm rounded bg-gray-700 hover:bg-gray-600 text-gray-100 transition-colors"
+                        class="inline-flex items-center h-[36px] px-4 text-sm rounded bg-base-200 hover:bg-base-300 text-base-content transition-colors"
                       >
                         <.icon name="hero-pencil" class="size-3.5" />
                       </.link>
@@ -682,7 +682,7 @@ defmodule SwarmshieldWeb.Admin.PoliciesLive do
                         phx-click="delete"
                         phx-value-id={policy.id}
                         data-confirm={"Delete policy \"#{policy.name}\"? This cannot be undone."}
-                        class="inline-flex items-center h-[36px] px-4 text-sm rounded border border-red-400/30 text-red-400 hover:bg-red-400/10 transition-colors"
+                        class="inline-flex items-center h-[36px] px-4 text-sm rounded border-[0.5px] border-error/30 text-error hover:bg-error/10 transition-colors"
                       >
                         <.icon name="hero-trash" class="size-3.5" />
                       </button>
@@ -698,14 +698,14 @@ defmodule SwarmshieldWeb.Admin.PoliciesLive do
         <div
           :if={@total_count == 0}
           id="policies-empty"
-          class="bg-gray-800 border border-gray-700 rounded-lg p-12 text-center"
+          class="bg-base-100 border-[0.5px] border-base-300 rounded-lg p-12 text-center"
         >
-          <.icon name="hero-scale" class="size-12 mx-auto text-gray-600 mb-4" />
-          <p class="text-gray-400 mb-4">No consensus policies configured</p>
+          <.icon name="hero-scale" class="size-12 mx-auto text-base-content/30 mb-4" />
+          <p class="text-base-content/70 mb-4">No consensus policies configured</p>
           <.link
             :if={AuthHooks.has_socket_permission?(assigns, "policies:create")}
             patch={~p"/admin/consensus-policies/new"}
-            class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+            class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-primary hover:bg-primary/80 text-white text-sm font-medium transition-colors"
           >
             <.icon name="hero-plus" class="size-4" /> Create First Policy
           </.link>
@@ -723,7 +723,7 @@ defmodule SwarmshieldWeb.Admin.PoliciesLive do
 
   defp strategy_badge(%{strategy: :majority} = assigns) do
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-400/20 text-blue-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-info/20 text-info">
       Majority
     </span>
     """
@@ -731,7 +731,7 @@ defmodule SwarmshieldWeb.Admin.PoliciesLive do
 
   defp strategy_badge(%{strategy: :supermajority} = assigns) do
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-400/20 text-purple-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent/20 text-accent">
       Supermajority
     </span>
     """
@@ -739,7 +739,7 @@ defmodule SwarmshieldWeb.Admin.PoliciesLive do
 
   defp strategy_badge(%{strategy: :unanimous} = assigns) do
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-400/20 text-yellow-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning/20 text-warning">
       Unanimous
     </span>
     """
@@ -747,7 +747,7 @@ defmodule SwarmshieldWeb.Admin.PoliciesLive do
 
   defp strategy_badge(%{strategy: :weighted} = assigns) do
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-400/20 text-green-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success/20 text-success">
       Weighted
     </span>
     """
@@ -755,7 +755,7 @@ defmodule SwarmshieldWeb.Admin.PoliciesLive do
 
   defp strategy_badge(assigns) do
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-400/20 text-gray-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-base-content/10 text-base-content/70">
       {@strategy}
     </span>
     """
@@ -766,25 +766,25 @@ defmodule SwarmshieldWeb.Admin.PoliciesLive do
 
   defp threshold_display(%{strategy: :unanimous} = assigns) do
     ~H"""
-    <span class="text-sm text-gray-500">N/A (always 100%)</span>
+    <span class="text-sm text-base-content/50">N/A (always 100%)</span>
     """
   end
 
   defp threshold_display(%{strategy: :weighted} = assigns) do
     ~H"""
-    <span class="text-sm text-gray-500">Weighted</span>
+    <span class="text-sm text-base-content/50">Weighted</span>
     """
   end
 
   defp threshold_display(%{threshold: nil} = assigns) do
     ~H"""
-    <span class="text-sm text-gray-500">—</span>
+    <span class="text-sm text-base-content/50">—</span>
     """
   end
 
   defp threshold_display(assigns) do
     ~H"""
-    <span class="text-sm tabular-nums text-gray-100">
+    <span class="text-sm tabular-nums text-base-content">
       {Float.round(@threshold * 100, 1)}%
     </span>
     """
@@ -794,7 +794,7 @@ defmodule SwarmshieldWeb.Admin.PoliciesLive do
 
   defp enabled_badge(%{enabled: true} = assigns) do
     ~H"""
-    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-400/20 text-green-400">
+    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-success/20 text-success">
       <.icon name="hero-check-circle" class="size-3" /> Enabled
     </span>
     """
@@ -802,7 +802,7 @@ defmodule SwarmshieldWeb.Admin.PoliciesLive do
 
   defp enabled_badge(assigns) do
     ~H"""
-    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-400/20 text-gray-400">
+    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-base-content/10 text-base-content/70">
       <.icon name="hero-x-circle" class="size-3" /> Disabled
     </span>
     """

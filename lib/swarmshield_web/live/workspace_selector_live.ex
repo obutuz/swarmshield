@@ -57,17 +57,17 @@ defmodule SwarmshieldWeb.WorkspaceSelectorLive do
     <Layouts.app flash={@flash} current_scope={@current_scope}>
       <div class="min-h-[60vh] flex items-center justify-center px-4">
         <div class="w-full max-w-lg">
-          <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 sm:p-8">
+          <div class="bg-base-100 border-[0.5px] border-base-300 rounded-lg p-6 sm:p-8">
             <div class="text-center mb-6">
-              <h1 class="text-2xl sm:text-3xl font-bold text-gray-100">Select Workspace</h1>
-              <p class="text-gray-400 mt-2">Choose a workspace to continue.</p>
+              <h1 class="text-2xl sm:text-3xl font-bold text-base-content">Select Workspace</h1>
+              <p class="text-base-content/70 mt-2">Choose a workspace to continue.</p>
             </div>
 
             <div :if={@workspaces == []} class="text-center py-8">
-              <p class="text-gray-400 mb-4">You don't belong to any workspaces yet.</p>
+              <p class="text-base-content/70 mb-4">You don't belong to any workspaces yet.</p>
               <.link
                 navigate={~p"/onboarding"}
-                class="h-[44px] px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg inline-flex items-center"
+                class="h-[44px] px-6 bg-primary hover:bg-primary/80 text-white rounded-lg inline-flex items-center"
               >
                 Create a Workspace
               </.link>
@@ -105,16 +105,16 @@ defmodule SwarmshieldWeb.WorkspaceSelectorLive do
   defp workspace_card(%{is_system_owner: true} = assigns) do
     # System owners see raw Workspace structs (no UWR wrapper)
     ~H"""
-    <div class="flex items-center justify-between p-4 bg-gray-900 border border-gray-700 rounded-lg hover:border-blue-500 transition-colors">
+    <div class="flex items-center justify-between p-4 bg-base-200 border-[0.5px] border-base-300 rounded-lg hover:border-primary transition-colors">
       <div>
-        <p class="text-gray-100 font-medium">{@item.name}</p>
-        <p class="text-gray-500 text-sm">System Owner</p>
+        <p class="text-base-content font-medium">{@item.name}</p>
+        <p class="text-base-content/50 text-sm">System Owner</p>
       </div>
       <button
         type="button"
         phx-click="select_workspace"
         phx-value-workspace-id={@item.id}
-        class="h-[36px] px-4 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded inline-flex items-center"
+        class="h-[36px] px-4 text-sm bg-primary hover:bg-primary/80 text-white rounded inline-flex items-center"
       >
         Select
       </button>
@@ -125,16 +125,16 @@ defmodule SwarmshieldWeb.WorkspaceSelectorLive do
   defp workspace_card(assigns) do
     # Regular users see UWR structs with preloaded workspace + role
     ~H"""
-    <div class="flex items-center justify-between p-4 bg-gray-900 border border-gray-700 rounded-lg hover:border-blue-500 transition-colors">
+    <div class="flex items-center justify-between p-4 bg-base-200 border-[0.5px] border-base-300 rounded-lg hover:border-primary transition-colors">
       <div>
-        <p class="text-gray-100 font-medium">{@item.workspace.name}</p>
-        <p class="text-gray-500 text-sm">{@item.role.name}</p>
+        <p class="text-base-content font-medium">{@item.workspace.name}</p>
+        <p class="text-base-content/50 text-sm">{@item.role.name}</p>
       </div>
       <button
         type="button"
         phx-click="select_workspace"
         phx-value-workspace-id={@item.workspace_id}
-        class="h-[36px] px-4 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded inline-flex items-center"
+        class="h-[36px] px-4 text-sm bg-primary hover:bg-primary/80 text-white rounded inline-flex items-center"
       >
         Select
       </button>

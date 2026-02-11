@@ -250,20 +250,20 @@ defmodule SwarmshieldWeb.Admin.AgentDefinitionsLive do
       <div class="space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 class="text-3xl font-bold text-gray-100">
+            <h1 class="text-3xl font-bold text-base-content">
               {if @live_action == :new, do: "New Agent Definition", else: "Edit Agent Definition"}
             </h1>
-            <p class="text-gray-400 mt-1">Configure an AI persona for deliberation analysis</p>
+            <p class="text-base-content/70 mt-1">Configure an AI persona for deliberation analysis</p>
           </div>
           <.link
             patch={~p"/admin/agent-definitions"}
-            class="inline-flex items-center gap-2 h-[44px] px-4 rounded-lg border border-gray-600 text-sm text-gray-100 hover:bg-gray-800 transition-colors"
+            class="inline-flex items-center gap-2 h-[44px] px-4 rounded-lg border-[0.5px] border-base-300 text-sm text-base-content hover:bg-base-200 transition-colors"
           >
             <.icon name="hero-arrow-left" class="size-4" /> Back to Definitions
           </.link>
         </div>
 
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
+        <div class="bg-base-100 border-[0.5px] border-base-300 rounded-lg p-6">
           <.form
             for={@form}
             id="agent-definition-form"
@@ -307,7 +307,7 @@ defmodule SwarmshieldWeb.Admin.AgentDefinitionsLive do
 
             <%!-- Expertise tags --%>
             <div class="space-y-1">
-              <label class="block text-sm font-medium text-gray-300">
+              <label class="block text-sm font-medium text-base-content/80">
                 Expertise (comma separated)
               </label>
               <textarea
@@ -315,12 +315,12 @@ defmodule SwarmshieldWeb.Admin.AgentDefinitionsLive do
                 phx-debounce="300"
                 rows="2"
                 placeholder="threat detection, prompt injection, data privacy"
-                class="w-full bg-gray-900 border border-gray-600 rounded-lg text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 px-3 py-2"
+                class="w-full bg-base-200 border-[0.5px] border-base-300 rounded-lg text-base-content focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2"
               >{@expertise_text}</textarea>
               <div :if={@expertise_text != ""} class="flex flex-wrap gap-1.5 mt-2">
                 <span
                   :for={tag <- parse_tags(@expertise_text)}
-                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-400/20 text-blue-400"
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-info/20 text-info"
                 >
                   {tag}
                 </span>
@@ -338,7 +338,7 @@ defmodule SwarmshieldWeb.Admin.AgentDefinitionsLive do
                 required
                 placeholder="You are a security analyst specializing in..."
               />
-              <p class="text-xs text-gray-500 text-right">
+              <p class="text-xs text-base-content/50 text-right">
                 {@prompt_char_count} / 102,400 characters
               </p>
             </div>
@@ -364,7 +364,7 @@ defmodule SwarmshieldWeb.Admin.AgentDefinitionsLive do
                   max="1"
                   phx-debounce="300"
                 />
-                <p class="text-xs text-gray-500">0 = deterministic, 1 = creative</p>
+                <p class="text-xs text-base-content/50">0 = deterministic, 1 = creative</p>
               </div>
               <div>
                 <.input
@@ -383,17 +383,17 @@ defmodule SwarmshieldWeb.Admin.AgentDefinitionsLive do
               <.input field={@form[:enabled]} type="checkbox" label="Enabled" />
             </div>
 
-            <div class="flex justify-end gap-3 pt-4 border-t border-gray-700">
+            <div class="flex justify-end gap-3 pt-4 border-t-[0.5px] border-base-300">
               <.link
                 patch={~p"/admin/agent-definitions"}
-                class="inline-flex items-center h-[44px] px-6 rounded-lg border border-gray-600 text-sm text-gray-100 hover:bg-gray-700 transition-colors"
+                class="inline-flex items-center h-[44px] px-6 rounded-lg border-[0.5px] border-base-300 text-sm text-base-content hover:bg-base-200 transition-colors"
               >
                 Cancel
               </.link>
               <button
                 type="submit"
                 phx-disable-with="Saving..."
-                class="inline-flex items-center h-[44px] px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+                class="inline-flex items-center h-[44px] px-6 rounded-lg bg-primary hover:bg-primary/80 text-white text-sm font-medium transition-colors"
               >
                 <.icon name="hero-check" class="size-4 mr-2" />
                 {if @live_action == :new, do: "Create Definition", else: "Save Changes"}
@@ -422,18 +422,18 @@ defmodule SwarmshieldWeb.Admin.AgentDefinitionsLive do
       <div class="space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 class="text-3xl font-bold text-gray-100">
-              <.icon name="hero-cpu-chip" class="size-8 inline-block mr-1 text-blue-400" />
+            <h1 class="text-3xl font-bold text-base-content">
+              <.icon name="hero-cpu-chip" class="size-8 inline-block mr-1 text-info" />
               Agent Definitions
             </h1>
-            <p class="text-gray-400 mt-1">
+            <p class="text-base-content/70 mt-1">
               {@total_count} definition{if @total_count != 1, do: "s"} configured
             </p>
           </div>
           <.link
             :if={AuthHooks.has_socket_permission?(assigns, "agents:create")}
             patch={~p"/admin/agent-definitions/new"}
-            class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+            class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-primary hover:bg-primary/80 text-white text-sm font-medium transition-colors"
           >
             <.icon name="hero-plus" class="size-4" /> New Definition
           </.link>
@@ -441,28 +441,28 @@ defmodule SwarmshieldWeb.Admin.AgentDefinitionsLive do
 
         <div
           :if={@total_count > 0}
-          class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden"
+          class="bg-base-100 border-[0.5px] border-base-300 rounded-lg overflow-hidden"
         >
           <div class="overflow-x-auto">
             <table class="w-full">
-              <thead class="bg-gray-900 border-b border-gray-700">
+              <thead class="bg-base-200 border-b-[0.5px] border-base-300">
                 <tr>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider">
                     Name
                   </th>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider hidden sm:table-cell">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider hidden sm:table-cell">
                     Role
                   </th>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider hidden md:table-cell">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider hidden md:table-cell">
                     Model
                   </th>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider hidden lg:table-cell">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider hidden lg:table-cell">
                     Temperature
                   </th>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider">
                     Status
                   </th>
-                  <th class="text-right px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th class="text-right px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -472,30 +472,30 @@ defmodule SwarmshieldWeb.Admin.AgentDefinitionsLive do
                   :for={{dom_id, defn} <- @streams.definitions}
                   id={dom_id}
                   class={[
-                    "border-b border-gray-700 transition-colors",
+                    "border-b-[0.5px] border-base-300 transition-colors",
                     if(defn.enabled,
-                      do: "hover:bg-gray-800/50",
-                      else: "opacity-50 hover:bg-gray-800/30"
+                      do: "hover:bg-base-200/30",
+                      else: "opacity-50 hover:bg-base-200/20"
                     )
                   ]}
                 >
                   <td class="px-6 py-4">
-                    <div class="font-medium text-sm text-gray-100">{defn.name}</div>
+                    <div class="font-medium text-sm text-base-content">{defn.name}</div>
                     <div
                       :if={defn.description}
-                      class="text-xs text-gray-500 truncate max-w-[200px]"
+                      class="text-xs text-base-content/50 truncate max-w-[200px]"
                     >
                       {defn.description}
                     </div>
                   </td>
                   <td class="px-6 py-4 hidden sm:table-cell">
-                    <span class="text-sm text-gray-300">{defn.role}</span>
+                    <span class="text-sm text-base-content/80">{defn.role}</span>
                   </td>
                   <td class="px-6 py-4 hidden md:table-cell">
                     <.model_badge model={defn.model} />
                   </td>
                   <td class="px-6 py-4 hidden lg:table-cell">
-                    <span class="text-sm text-gray-300">{defn.temperature}</span>
+                    <span class="text-sm text-base-content/80">{defn.temperature}</span>
                   </td>
                   <td class="px-6 py-4">
                     <button
@@ -516,7 +516,7 @@ defmodule SwarmshieldWeb.Admin.AgentDefinitionsLive do
                       <.link
                         :if={AuthHooks.has_socket_permission?(assigns, "agents:update")}
                         patch={~p"/admin/agent-definitions/#{defn.id}/edit"}
-                        class="inline-flex items-center h-[36px] px-4 text-sm rounded bg-gray-700 hover:bg-gray-600 text-gray-100 transition-colors"
+                        class="inline-flex items-center h-[36px] px-4 text-sm rounded bg-base-200 hover:bg-base-300 text-base-content transition-colors"
                       >
                         <.icon name="hero-pencil" class="size-3.5" />
                       </.link>
@@ -525,7 +525,7 @@ defmodule SwarmshieldWeb.Admin.AgentDefinitionsLive do
                         phx-click="delete"
                         phx-value-id={defn.id}
                         data-confirm={"Delete agent \"#{defn.name}\"? This cannot be undone."}
-                        class="inline-flex items-center h-[36px] px-4 text-sm rounded border border-red-400/30 text-red-400 hover:bg-red-400/10 transition-colors"
+                        class="inline-flex items-center h-[36px] px-4 text-sm rounded border-[0.5px] border-error/30 text-error hover:bg-error/10 transition-colors"
                       >
                         <.icon name="hero-trash" class="size-3.5" />
                       </button>
@@ -540,14 +540,14 @@ defmodule SwarmshieldWeb.Admin.AgentDefinitionsLive do
         <div
           :if={@total_count == 0}
           id="agent-definitions-empty"
-          class="bg-gray-800 border border-gray-700 rounded-lg p-12 text-center"
+          class="bg-base-100 border-[0.5px] border-base-300 rounded-lg p-12 text-center"
         >
-          <.icon name="hero-cpu-chip" class="size-12 mx-auto text-gray-600 mb-4" />
-          <p class="text-gray-400 mb-4">No agent definitions configured</p>
+          <.icon name="hero-cpu-chip" class="size-12 mx-auto text-base-content/30 mb-4" />
+          <p class="text-base-content/70 mb-4">No agent definitions configured</p>
           <.link
             :if={AuthHooks.has_socket_permission?(assigns, "agents:create")}
             patch={~p"/admin/agent-definitions/new"}
-            class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+            class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-primary hover:bg-primary/80 text-white text-sm font-medium transition-colors"
           >
             <.icon name="hero-plus" class="size-4" /> Create First Definition
           </.link>
@@ -586,7 +586,7 @@ defmodule SwarmshieldWeb.Admin.AgentDefinitionsLive do
     assigns = assign(assigns, :label, label)
 
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-400/20 text-purple-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent/20 text-accent">
       {@label}
     </span>
     """
@@ -596,7 +596,7 @@ defmodule SwarmshieldWeb.Admin.AgentDefinitionsLive do
 
   defp enabled_badge(%{enabled: true} = assigns) do
     ~H"""
-    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-400/20 text-green-400">
+    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-success/20 text-success">
       <.icon name="hero-check-circle" class="size-3" /> Enabled
     </span>
     """
@@ -604,7 +604,7 @@ defmodule SwarmshieldWeb.Admin.AgentDefinitionsLive do
 
   defp enabled_badge(assigns) do
     ~H"""
-    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-400/20 text-gray-400">
+    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-base-content/10 text-base-content/70">
       <.icon name="hero-x-circle" class="size-3" /> Disabled
     </span>
     """

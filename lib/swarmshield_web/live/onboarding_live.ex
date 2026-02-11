@@ -40,13 +40,13 @@ defmodule SwarmshieldWeb.OnboardingLive do
 
   defp render_form_step(assigns) do
     ~H"""
-    <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 sm:p-8">
+    <div class="bg-base-100 border-[0.5px] border-base-300 rounded-lg p-6 sm:p-8">
       <div class="text-center mb-6">
-        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-600/20 mb-4">
-          <.icon name="hero-building-office-2" class="h-6 w-6 text-blue-400" />
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/20 mb-4">
+          <.icon name="hero-building-office-2" class="h-6 w-6 text-info" />
         </div>
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-100">Create Your Workspace</h1>
-        <p class="text-gray-400 mt-2">
+        <h1 class="text-2xl sm:text-3xl font-bold text-base-content">Create Your Workspace</h1>
+        <p class="text-base-content/70 mt-2">
           Set up your first workspace to start protecting your AI agents.
         </p>
       </div>
@@ -54,7 +54,7 @@ defmodule SwarmshieldWeb.OnboardingLive do
       <.form for={@form} id="onboarding-form" phx-change="validate" phx-submit="save">
         <div class="space-y-4">
           <div>
-            <label for="workspace_name" class="block text-sm font-medium text-gray-300 mb-1">
+            <label for="workspace_name" class="block text-sm font-medium text-base-content/80 mb-1">
               Workspace Name
             </label>
             <input
@@ -65,17 +65,20 @@ defmodule SwarmshieldWeb.OnboardingLive do
               phx-debounce="300"
               placeholder="e.g. Acme Corp"
               autocomplete="organization"
-              class="w-full h-[44px] bg-gray-900 border border-gray-600 rounded-lg text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 px-3 placeholder-gray-500"
+              class="w-full h-[44px] bg-base-200 border-[0.5px] border-base-300 rounded-lg text-base-content focus:border-primary focus:ring-1 focus:ring-primary px-3 placeholder-gray-500"
             />
             <.field_error field={@form[:name]} />
-            <p :if={@slug_preview != ""} class="text-sm text-gray-500 mt-1">
+            <p :if={@slug_preview != ""} class="text-sm text-base-content/50 mt-1">
               Slug: {@slug_preview}
             </p>
           </div>
 
           <div>
-            <label for="workspace_description" class="block text-sm font-medium text-gray-300 mb-1">
-              Description <span class="text-gray-500">(optional)</span>
+            <label
+              for="workspace_description"
+              class="block text-sm font-medium text-base-content/80 mb-1"
+            >
+              Description <span class="text-base-content/50">(optional)</span>
             </label>
             <textarea
               name={@form[:description].name}
@@ -83,7 +86,7 @@ defmodule SwarmshieldWeb.OnboardingLive do
               phx-debounce="300"
               rows="3"
               placeholder="What will this workspace be used for?"
-              class="w-full bg-gray-900 border border-gray-600 rounded-lg text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 px-3 py-2 placeholder-gray-500 resize-none"
+              class="w-full bg-base-200 border-[0.5px] border-base-300 rounded-lg text-base-content focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2 placeholder-gray-500 resize-none"
             >{@form[:description].value}</textarea>
             <.field_error field={@form[:description]} />
           </div>
@@ -96,7 +99,7 @@ defmodule SwarmshieldWeb.OnboardingLive do
             <button
               type="submit"
               phx-disable-with="Creating workspace..."
-              class="w-full h-[44px] bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+              class="w-full h-[44px] bg-primary hover:bg-primary/80 text-white font-medium rounded-lg transition-colors"
             >
               Create Workspace
             </button>
@@ -109,25 +112,25 @@ defmodule SwarmshieldWeb.OnboardingLive do
 
   defp render_success_step(assigns) do
     ~H"""
-    <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 sm:p-8">
+    <div class="bg-base-100 border-[0.5px] border-base-300 rounded-lg p-6 sm:p-8">
       <div class="text-center mb-6">
-        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-400/20 mb-4">
-          <.icon name="hero-check-circle" class="h-6 w-6 text-green-400" />
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-success/20 mb-4">
+          <.icon name="hero-check-circle" class="h-6 w-6 text-success" />
         </div>
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-100">Workspace Created!</h1>
-        <p class="text-gray-400 mt-2">
-          <strong class="text-gray-100">{@workspace_name}</strong>
+        <h1 class="text-2xl sm:text-3xl font-bold text-base-content">Workspace Created!</h1>
+        <p class="text-base-content/70 mt-2">
+          <strong class="text-base-content">{@workspace_name}</strong>
           is ready. Save your API key below — it won't be shown again.
         </p>
       </div>
 
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-300 mb-1">
+          <label class="block text-sm font-medium text-base-content/80 mb-1">
             Your API Key
           </label>
-          <div class="bg-yellow-400/10 border border-yellow-400/30 rounded-lg p-3 mb-2">
-            <p class="text-yellow-400 text-xs font-medium mb-1">
+          <div class="bg-yellow-400/10 border-[0.5px] border-warning/30 rounded-lg p-3 mb-2">
+            <p class="text-warning text-xs font-medium mb-1">
               Save this key now — you will not be able to see it again.
             </p>
           </div>
@@ -137,14 +140,14 @@ defmodule SwarmshieldWeb.OnboardingLive do
               readonly
               value={@raw_api_key}
               id="api-key-display"
-              class="flex-1 h-[44px] bg-gray-900 border border-gray-600 rounded-lg text-gray-100 px-3 font-mono text-sm select-all"
+              class="flex-1 h-[44px] bg-base-200 border-[0.5px] border-base-300 rounded-lg text-base-content px-3 font-mono text-sm select-all"
               onclick="this.select()"
             />
             <button
               type="button"
               id="copy-api-key-btn"
               phx-click="copy_key"
-              class="h-[44px] px-4 bg-gray-700 hover:bg-gray-600 text-gray-100 rounded-lg transition-colors whitespace-nowrap"
+              class="h-[44px] px-4 bg-base-200 hover:bg-base-300 text-base-content rounded-lg transition-colors whitespace-nowrap"
             >
               {if @key_copied, do: "Copied!", else: "Copy"}
             </button>
@@ -155,7 +158,7 @@ defmodule SwarmshieldWeb.OnboardingLive do
           <button
             type="button"
             phx-click="continue_to_dashboard"
-            class="w-full h-[44px] bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+            class="w-full h-[44px] bg-primary hover:bg-primary/80 text-white font-medium rounded-lg transition-colors"
           >
             Continue to Dashboard
           </button>
@@ -171,7 +174,7 @@ defmodule SwarmshieldWeb.OnboardingLive do
     ~H"""
     <div
       :for={msg <- Enum.map(@field.errors, &translate_error/1)}
-      class="text-red-400 text-sm mt-1"
+      class="text-error text-sm mt-1"
     >
       {msg}
     </div>

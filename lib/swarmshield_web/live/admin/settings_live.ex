@@ -186,16 +186,16 @@ defmodule SwarmshieldWeb.Admin.SettingsLive do
     >
       <div class="space-y-6">
         <div>
-          <h1 class="text-3xl font-bold text-gray-100">
-            <.icon name="hero-cog-6-tooth" class="size-8 inline-block mr-1 text-blue-400" />
+          <h1 class="text-3xl font-bold text-base-content">
+            <.icon name="hero-cog-6-tooth" class="size-8 inline-block mr-1 text-info" />
             Workspace Settings
           </h1>
-          <p class="text-gray-400 mt-1">Configure workspace preferences and API access</p>
+          <p class="text-base-content/70 mt-1">Configure workspace preferences and API access</p>
         </div>
 
         <%!-- General settings --%>
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
-          <h2 class="text-lg font-semibold text-gray-100 mb-4">General</h2>
+        <div class="bg-base-100 border-[0.5px] border-base-300 rounded-lg p-6">
+          <h2 class="text-lg font-semibold text-base-content mb-4">General</h2>
           <.form
             for={@form}
             id="workspace-settings-form"
@@ -237,7 +237,7 @@ defmodule SwarmshieldWeb.Admin.SettingsLive do
                 :if={AuthHooks.has_socket_permission?(assigns, "settings:update")}
                 type="submit"
                 phx-disable-with="Saving..."
-                class="inline-flex items-center h-[44px] px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+                class="inline-flex items-center h-[44px] px-6 rounded-lg bg-primary hover:bg-primary/80 text-white text-sm font-medium transition-colors"
               >
                 Save General Settings
               </button>
@@ -246,8 +246,8 @@ defmodule SwarmshieldWeb.Admin.SettingsLive do
         </div>
 
         <%!-- Deliberation settings --%>
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
-          <h2 class="text-lg font-semibold text-gray-100 mb-4">Deliberation Defaults</h2>
+        <div class="bg-base-100 border-[0.5px] border-base-300 rounded-lg p-6">
+          <h2 class="text-lg font-semibold text-base-content mb-4">Deliberation Defaults</h2>
           <form
             id="deliberation-settings-form"
             phx-submit="save_settings"
@@ -255,7 +255,7 @@ defmodule SwarmshieldWeb.Admin.SettingsLive do
           >
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
-                <label class="block text-sm font-medium text-gray-300 mb-1">
+                <label class="block text-sm font-medium text-base-content/80 mb-1">
                   Default Timeout (seconds)
                 </label>
                 <input
@@ -265,11 +265,11 @@ defmodule SwarmshieldWeb.Admin.SettingsLive do
                   min="30"
                   max="3600"
                   phx-debounce="300"
-                  class="w-full h-[44px] bg-gray-900 border border-gray-600 rounded-lg text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 px-3"
+                  class="w-full h-[44px] bg-base-200 border-[0.5px] border-base-300 rounded-lg text-base-content focus:border-primary focus:ring-1 focus:ring-primary px-3"
                 />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-300 mb-1">
+                <label class="block text-sm font-medium text-base-content/80 mb-1">
                   Max Deliberation Rounds
                 </label>
                 <input
@@ -279,7 +279,7 @@ defmodule SwarmshieldWeb.Admin.SettingsLive do
                   min="1"
                   max="10"
                   phx-debounce="300"
-                  class="w-full h-[44px] bg-gray-900 border border-gray-600 rounded-lg text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 px-3"
+                  class="w-full h-[44px] bg-base-200 border-[0.5px] border-base-300 rounded-lg text-base-content focus:border-primary focus:ring-1 focus:ring-primary px-3"
                 />
               </div>
             </div>
@@ -288,7 +288,7 @@ defmodule SwarmshieldWeb.Admin.SettingsLive do
                 :if={AuthHooks.has_socket_permission?(assigns, "settings:update")}
                 type="submit"
                 phx-disable-with="Saving..."
-                class="inline-flex items-center h-[44px] px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+                class="inline-flex items-center h-[44px] px-6 rounded-lg bg-primary hover:bg-primary/80 text-white text-sm font-medium transition-colors"
               >
                 Save Deliberation Settings
               </button>
@@ -297,14 +297,14 @@ defmodule SwarmshieldWeb.Admin.SettingsLive do
         </div>
 
         <%!-- API Key management --%>
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
-          <h2 class="text-lg font-semibold text-gray-100 mb-4">API Key</h2>
+        <div class="bg-base-100 border-[0.5px] border-base-300 rounded-lg p-6">
+          <h2 class="text-lg font-semibold text-base-content mb-4">API Key</h2>
 
           <div class="space-y-4">
             <div class="flex items-center gap-4">
               <div>
-                <p class="text-sm text-gray-300">Current key prefix:</p>
-                <p class="text-sm font-mono text-gray-400">
+                <p class="text-sm text-base-content/80">Current key prefix:</p>
+                <p class="text-sm font-mono text-base-content/70">
                   {@workspace.api_key_prefix || "Not generated"}...
                 </p>
               </div>
@@ -313,26 +313,26 @@ defmodule SwarmshieldWeb.Admin.SettingsLive do
             <%!-- Newly generated key display --%>
             <div
               :if={@newly_generated_key}
-              class="bg-green-400/10 border border-green-400/30 rounded-lg p-4 space-y-2"
+              class="bg-success/10 border-[0.5px] border-success/30 rounded-lg p-4 space-y-2"
             >
               <div class="flex items-center gap-2">
-                <.icon name="hero-key" class="size-5 text-green-400" />
-                <p class="text-sm font-medium text-green-400">
+                <.icon name="hero-key" class="size-5 text-success" />
+                <p class="text-sm font-medium text-success">
                   New API key generated — copy it now!
                 </p>
               </div>
               <div class="flex items-center gap-2">
-                <code class="flex-1 text-sm font-mono text-gray-100 bg-gray-900 rounded px-3 py-2 break-all">
+                <code class="flex-1 text-sm font-mono text-base-content bg-base-200 rounded px-3 py-2 break-all">
                   {@newly_generated_key}
                 </code>
               </div>
-              <p class="text-xs text-gray-500">
+              <p class="text-xs text-base-content/50">
                 This key will not be shown again. Store it securely.
               </p>
               <button
                 type="button"
                 phx-click="dismiss_key"
-                class="text-xs text-gray-400 hover:text-gray-300 transition-colors"
+                class="text-xs text-base-content/70 hover:text-base-content/80 transition-colors"
               >
                 Dismiss
               </button>
@@ -344,7 +344,7 @@ defmodule SwarmshieldWeb.Admin.SettingsLive do
                 type="button"
                 phx-click="regenerate_api_key"
                 data-confirm="Regenerate API key? The current key will be immediately invalidated. All API requests using the old key will be rejected."
-                class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg border border-red-400/30 text-red-400 hover:bg-red-400/10 text-sm font-medium transition-colors"
+                class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg border-[0.5px] border-error/30 text-error hover:bg-error/10 text-sm font-medium transition-colors"
               >
                 <.icon name="hero-arrow-path" class="size-4" /> Regenerate API Key
               </button>

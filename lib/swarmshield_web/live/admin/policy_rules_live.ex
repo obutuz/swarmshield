@@ -466,22 +466,22 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
       <div class="space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 class="text-3xl font-bold text-gray-100">
+            <h1 class="text-3xl font-bold text-base-content">
               {if @live_action == :new, do: "New Policy Rule", else: "Edit Policy Rule"}
             </h1>
-            <p class="text-gray-400 mt-1">
+            <p class="text-base-content/70 mt-1">
               Configure event evaluation rules
             </p>
           </div>
           <.link
             patch={~p"/admin/policy-rules"}
-            class="inline-flex items-center gap-2 h-[44px] px-4 rounded-lg border border-gray-600 text-sm text-gray-100 hover:bg-gray-800 transition-colors"
+            class="inline-flex items-center gap-2 h-[44px] px-4 rounded-lg border-[0.5px] border-base-300 text-sm text-base-content hover:bg-base-200 transition-colors"
           >
             <.icon name="hero-arrow-left" class="size-4" /> Back to Rules
           </.link>
         </div>
 
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
+        <div class="bg-base-100 border-[0.5px] border-base-300 rounded-lg p-6">
           <.form
             for={@form}
             id="rule-form"
@@ -548,8 +548,8 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
             </div>
 
             <%!-- Dynamic config fields based on rule_type --%>
-            <div class="border-t border-gray-700 pt-5">
-              <h3 class="text-sm font-semibold text-gray-300 mb-3">
+            <div class="border-t-[0.5px] border-base-300 pt-5">
+              <h3 class="text-sm font-semibold text-base-content/80 mb-3">
                 Configuration — {rule_type_label(@selected_rule_type)}
               </h3>
 
@@ -565,17 +565,17 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
               />
             </div>
 
-            <div class="flex justify-end gap-3 pt-4 border-t border-gray-700">
+            <div class="flex justify-end gap-3 pt-4 border-t-[0.5px] border-base-300">
               <.link
                 patch={~p"/admin/policy-rules"}
-                class="inline-flex items-center h-[44px] px-6 rounded-lg border border-gray-600 text-sm text-gray-100 hover:bg-gray-700 transition-colors"
+                class="inline-flex items-center h-[44px] px-6 rounded-lg border-[0.5px] border-base-300 text-sm text-base-content hover:bg-base-200 transition-colors"
               >
                 Cancel
               </.link>
               <button
                 type="submit"
                 phx-disable-with="Saving..."
-                class="inline-flex items-center h-[44px] px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+                class="inline-flex items-center h-[44px] px-6 rounded-lg bg-primary hover:bg-primary/80 text-white text-sm font-medium transition-colors"
               >
                 <.icon name="hero-check" class="size-4 mr-2" />
                 {if @live_action == :new, do: "Create Rule", else: "Save Changes"}
@@ -604,18 +604,18 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
       <div class="space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 class="text-3xl font-bold text-gray-100">
-              <.icon name="hero-shield-check" class="size-8 inline-block mr-1 text-blue-400" />
+            <h1 class="text-3xl font-bold text-base-content">
+              <.icon name="hero-shield-check" class="size-8 inline-block mr-1 text-info" />
               Policy Rules
             </h1>
-            <p class="text-gray-400 mt-1">
+            <p class="text-base-content/70 mt-1">
               {@total_count} rule{if @total_count != 1, do: "s"} configured
             </p>
           </div>
           <.link
             :if={AuthHooks.has_socket_permission?(assigns, "policies:create")}
             patch={~p"/admin/policy-rules/new"}
-            class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+            class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-primary hover:bg-primary/80 text-white text-sm font-medium transition-colors"
           >
             <.icon name="hero-plus" class="size-4" /> New Rule
           </.link>
@@ -623,28 +623,28 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
 
         <div
           :if={@total_count > 0}
-          class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden"
+          class="bg-base-100 border-[0.5px] border-base-300 rounded-lg overflow-hidden"
         >
           <div class="overflow-x-auto">
             <table class="w-full">
-              <thead class="bg-gray-900 border-b border-gray-700">
+              <thead class="bg-base-200 border-b-[0.5px] border-base-300">
                 <tr>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider">
                     Name
                   </th>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider hidden sm:table-cell">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider hidden sm:table-cell">
                     Type
                   </th>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider hidden sm:table-cell">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider hidden sm:table-cell">
                     Action
                   </th>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider hidden md:table-cell">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider hidden md:table-cell">
                     Priority
                   </th>
-                  <th class="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th class="text-left px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider">
                     Status
                   </th>
-                  <th class="text-right px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th class="text-right px-6 py-3 text-xs font-medium text-base-content/70 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -654,18 +654,18 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
                   :for={{dom_id, rule} <- @streams.rules}
                   id={dom_id}
                   class={[
-                    "border-b border-gray-700 transition-colors",
+                    "border-b-[0.5px] border-base-300 transition-colors",
                     if(rule.enabled,
-                      do: "hover:bg-gray-800/50",
-                      else: "opacity-50 hover:bg-gray-800/30"
+                      do: "hover:bg-base-200/30",
+                      else: "opacity-50 hover:bg-base-200/20"
                     )
                   ]}
                 >
                   <td class="px-6 py-4">
-                    <div class="font-medium text-sm text-gray-100">{rule.name}</div>
+                    <div class="font-medium text-sm text-base-content">{rule.name}</div>
                     <div
                       :if={rule.description}
-                      class="text-xs text-gray-500 truncate max-w-[200px]"
+                      class="text-xs text-base-content/50 truncate max-w-[200px]"
                     >
                       {rule.description}
                     </div>
@@ -677,7 +677,7 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
                     <.action_badge action={rule.action} />
                   </td>
                   <td class="px-6 py-4 hidden md:table-cell">
-                    <span class="text-sm tabular-nums text-gray-100">{rule.priority}</span>
+                    <span class="text-sm tabular-nums text-base-content">{rule.priority}</span>
                   </td>
                   <td class="px-6 py-4">
                     <button
@@ -698,7 +698,7 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
                       <.link
                         :if={AuthHooks.has_socket_permission?(assigns, "policies:update")}
                         patch={~p"/admin/policy-rules/#{rule.id}/edit"}
-                        class="inline-flex items-center h-[36px] px-4 text-sm rounded bg-gray-700 hover:bg-gray-600 text-gray-100 transition-colors"
+                        class="inline-flex items-center h-[36px] px-4 text-sm rounded bg-base-200 hover:bg-base-300 text-base-content transition-colors"
                       >
                         <.icon name="hero-pencil" class="size-3.5" />
                       </.link>
@@ -707,7 +707,7 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
                         phx-click="delete"
                         phx-value-id={rule.id}
                         data-confirm={"Delete rule \"#{rule.name}\"? This cannot be undone."}
-                        class="inline-flex items-center h-[36px] px-4 text-sm rounded border border-red-400/30 text-red-400 hover:bg-red-400/10 transition-colors"
+                        class="inline-flex items-center h-[36px] px-4 text-sm rounded border-[0.5px] border-error/30 text-error hover:bg-error/10 transition-colors"
                       >
                         <.icon name="hero-trash" class="size-3.5" />
                       </button>
@@ -723,14 +723,14 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
         <div
           :if={@total_count == 0}
           id="rules-empty"
-          class="bg-gray-800 border border-gray-700 rounded-lg p-12 text-center"
+          class="bg-base-100 border-[0.5px] border-base-300 rounded-lg p-12 text-center"
         >
-          <.icon name="hero-shield-check" class="size-12 mx-auto text-gray-600 mb-4" />
-          <p class="text-gray-400 mb-4">No policy rules configured</p>
+          <.icon name="hero-shield-check" class="size-12 mx-auto text-base-content/30 mb-4" />
+          <p class="text-base-content/70 mb-4">No policy rules configured</p>
           <.link
             :if={AuthHooks.has_socket_permission?(assigns, "policies:create")}
             patch={~p"/admin/policy-rules/new"}
-            class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+            class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg bg-primary hover:bg-primary/80 text-white text-sm font-medium transition-colors"
           >
             <.icon name="hero-plus" class="size-4" /> Create First Rule
           </.link>
@@ -757,7 +757,7 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
     ~H"""
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
-        <label class="block text-sm font-medium text-gray-300 mb-1">Max Events</label>
+        <label class="block text-sm font-medium text-base-content/80 mb-1">Max Events</label>
         <input
           type="number"
           value={@cfg_max_events}
@@ -767,12 +767,12 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
           min="1"
           step="1"
           placeholder="e.g. 100"
-          class="w-full h-[44px] bg-gray-900 border border-gray-600 rounded-lg text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 px-3"
+          class="w-full h-[44px] bg-base-200 border-[0.5px] border-base-300 rounded-lg text-base-content focus:border-primary focus:ring-1 focus:ring-primary px-3"
         />
-        <p class="text-xs text-gray-500 mt-1">Maximum events allowed in the time window</p>
+        <p class="text-xs text-base-content/50 mt-1">Maximum events allowed in the time window</p>
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-300 mb-1">Window (seconds)</label>
+        <label class="block text-sm font-medium text-base-content/80 mb-1">Window (seconds)</label>
         <input
           type="number"
           value={@cfg_window_seconds}
@@ -782,9 +782,9 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
           min="1"
           step="1"
           placeholder="e.g. 60"
-          class="w-full h-[44px] bg-gray-900 border border-gray-600 rounded-lg text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 px-3"
+          class="w-full h-[44px] bg-base-200 border-[0.5px] border-base-300 rounded-lg text-base-content focus:border-primary focus:ring-1 focus:ring-primary px-3"
         />
-        <p class="text-xs text-gray-500 mt-1">Sliding window duration in seconds</p>
+        <p class="text-xs text-base-content/50 mt-1">Sliding window duration in seconds</p>
       </div>
     </div>
     """
@@ -793,17 +793,17 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
   defp config_fields(%{rule_type: "pattern_match"} = assigns) do
     ~H"""
     <div class="space-y-3">
-      <p class="text-xs text-gray-500">Select detection rules to match against:</p>
+      <p class="text-xs text-base-content/50">Select detection rules to match against:</p>
       <div
         :if={@detection_rule_options == []}
-        class="text-sm text-gray-500 italic"
+        class="text-sm text-base-content/50 italic"
       >
         No enabled detection rules available. Create detection rules first.
       </div>
       <div class="space-y-2">
         <label
           :for={{id, name} <- @detection_rule_options}
-          class="flex items-center gap-3 p-3 rounded-lg border border-gray-600 hover:bg-gray-700/50 transition-colors cursor-pointer"
+          class="flex items-center gap-3 p-3 rounded-lg border-[0.5px] border-base-300 hover:bg-base-200/30 transition-colors cursor-pointer"
         >
           <input
             type="checkbox"
@@ -812,7 +812,7 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
             phx-value-id={id}
             class="checkbox checkbox-sm checkbox-primary"
           />
-          <span class="text-sm text-gray-100">{name}</span>
+          <span class="text-sm text-base-content">{name}</span>
         </label>
       </div>
     </div>
@@ -822,7 +822,7 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
   defp config_fields(%{rule_type: type} = assigns) when type in ["blocklist", "allowlist"] do
     ~H"""
     <div>
-      <label class="block text-sm font-medium text-gray-300 mb-1">
+      <label class="block text-sm font-medium text-base-content/80 mb-1">
         Values (one per line)
       </label>
       <textarea
@@ -831,9 +831,9 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
         phx-debounce="300"
         rows="6"
         placeholder={"Enter #{@rule_type} values, one per line"}
-        class="w-full bg-gray-900 border border-gray-600 rounded-lg text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 px-3 py-2"
+        class="w-full bg-base-200 border-[0.5px] border-base-300 rounded-lg text-base-content focus:border-primary focus:ring-1 focus:ring-primary px-3 py-2"
       >{@cfg_values_text}</textarea>
-      <p class="text-xs text-gray-500 mt-1">
+      <p class="text-xs text-base-content/50 mt-1">
         {if @rule_type == "blocklist",
           do: "Blocked values - matching events will be actioned",
           else: "Allowed values - matching events will pass through"}
@@ -846,7 +846,7 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
     ~H"""
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
-        <label class="block text-sm font-medium text-gray-300 mb-1">Max Content (bytes)</label>
+        <label class="block text-sm font-medium text-base-content/80 mb-1">Max Content (bytes)</label>
         <input
           type="number"
           value={@cfg_max_content_bytes}
@@ -856,12 +856,12 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
           min="1"
           step="1"
           placeholder="e.g. 10240"
-          class="w-full h-[44px] bg-gray-900 border border-gray-600 rounded-lg text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 px-3"
+          class="w-full h-[44px] bg-base-200 border-[0.5px] border-base-300 rounded-lg text-base-content focus:border-primary focus:ring-1 focus:ring-primary px-3"
         />
-        <p class="text-xs text-gray-500 mt-1">Maximum content size in bytes</p>
+        <p class="text-xs text-base-content/50 mt-1">Maximum content size in bytes</p>
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-300 mb-1">Max Payload (bytes)</label>
+        <label class="block text-sm font-medium text-base-content/80 mb-1">Max Payload (bytes)</label>
         <input
           type="number"
           value={@cfg_max_payload_bytes}
@@ -871,9 +871,9 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
           min="1"
           step="1"
           placeholder="e.g. 51200"
-          class="w-full h-[44px] bg-gray-900 border border-gray-600 rounded-lg text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 px-3"
+          class="w-full h-[44px] bg-base-200 border-[0.5px] border-base-300 rounded-lg text-base-content focus:border-primary focus:ring-1 focus:ring-primary px-3"
         />
-        <p class="text-xs text-gray-500 mt-1">Maximum total payload size in bytes</p>
+        <p class="text-xs text-base-content/50 mt-1">Maximum total payload size in bytes</p>
       </div>
     </div>
     """
@@ -881,7 +881,7 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
 
   defp config_fields(assigns) do
     ~H"""
-    <p class="text-sm text-gray-500 italic">
+    <p class="text-sm text-base-content/50 italic">
       No additional configuration required for custom rule type.
     </p>
     """
@@ -895,7 +895,7 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
 
   defp rule_type_badge(%{type: :rate_limit} = assigns) do
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-400/20 text-blue-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-info/20 text-info">
       Rate Limit
     </span>
     """
@@ -903,7 +903,7 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
 
   defp rule_type_badge(%{type: :pattern_match} = assigns) do
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-400/20 text-purple-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent/20 text-accent">
       Pattern Match
     </span>
     """
@@ -911,7 +911,7 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
 
   defp rule_type_badge(%{type: :blocklist} = assigns) do
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-400/20 text-red-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-error/20 text-error">
       Blocklist
     </span>
     """
@@ -919,7 +919,7 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
 
   defp rule_type_badge(%{type: :allowlist} = assigns) do
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-400/20 text-green-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success/20 text-success">
       Allowlist
     </span>
     """
@@ -927,7 +927,7 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
 
   defp rule_type_badge(%{type: :payload_size} = assigns) do
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-400/20 text-yellow-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning/20 text-warning">
       Payload Size
     </span>
     """
@@ -935,7 +935,7 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
 
   defp rule_type_badge(assigns) do
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-400/20 text-gray-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-base-content/10 text-base-content/70">
       {@type}
     </span>
     """
@@ -945,7 +945,7 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
 
   defp action_badge(%{action: :allow} = assigns) do
     ~H"""
-    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-400/20 text-green-400">
+    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-success/20 text-success">
       <.icon name="hero-check-circle" class="size-3" /> Allow
     </span>
     """
@@ -953,7 +953,7 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
 
   defp action_badge(%{action: :flag} = assigns) do
     ~H"""
-    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-400/20 text-yellow-400">
+    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning/20 text-warning">
       <.icon name="hero-flag" class="size-3" /> Flag
     </span>
     """
@@ -961,7 +961,7 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
 
   defp action_badge(%{action: :block} = assigns) do
     ~H"""
-    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-400/20 text-red-400">
+    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-error/20 text-error">
       <.icon name="hero-no-symbol" class="size-3" /> Block
     </span>
     """
@@ -969,7 +969,7 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
 
   defp action_badge(assigns) do
     ~H"""
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-400/20 text-gray-400">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-base-content/10 text-base-content/70">
       {@action}
     </span>
     """
@@ -979,7 +979,7 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
 
   defp enabled_badge(%{enabled: true} = assigns) do
     ~H"""
-    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-400/20 text-green-400">
+    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-success/20 text-success">
       <.icon name="hero-check-circle" class="size-3" /> Enabled
     </span>
     """
@@ -987,7 +987,7 @@ defmodule SwarmshieldWeb.Admin.PolicyRulesLive do
 
   defp enabled_badge(assigns) do
     ~H"""
-    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-400/20 text-gray-400">
+    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-base-content/10 text-base-content/70">
       <.icon name="hero-x-circle" class="size-3" /> Disabled
     </span>
     """
