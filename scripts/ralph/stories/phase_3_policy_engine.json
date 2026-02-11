@@ -62,7 +62,7 @@
       "title": "Create Policies context",
       "description": "Policies context manages PolicyRule, DetectionRule, and PolicyViolation CRUD. Broadcasts PubSub events on rule changes for ETS cache invalidation.",
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "dependsOn": [],
       "acceptanceCriteria": [
         "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
