@@ -39,3 +39,4 @@ SCHEMA-011 DONE 2026-02-11 Create AnalysisSession schema - 721 tests pass, credo
 SCHEMA-012 DONE 2026-02-11 Create AgentInstance schema - 721 tests pass, credo clean
 SCHEMA-013 DONE 2026-02-11 Create DeliberationMessage schema - 721 tests pass, credo clean
 SCHEMA-014 DONE 2026-02-11 Create Verdict schema - 721 tests pass, credo clean
+POLICY-001 DONE 2026-02-11 Create Gateway context - 766 tests pass, credo clean

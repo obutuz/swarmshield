@@ -26,7 +26,7 @@
       "title": "Create Gateway context",
       "description": "Gateway context manages RegisteredAgent and AgentEvent CRUD operations. All functions include proper preloads. This is the ingestion layer.",
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "dependsOn": [],
       "acceptanceCriteria": [
         "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
