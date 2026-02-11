@@ -161,6 +161,35 @@ defmodule Swarmshield.Deliberation.AnalysisSessionTest do
     end
   end
 
+  describe "FK cascade behavior" do
+    test "deleting workspace cascades to analysis sessions" do
+      session = DeliberationFixtures.analysis_session_fixture()
+      workspace = Repo.get!(Swarmshield.Accounts.Workspace, session.workspace_id)
+
+      Repo.delete!(workspace)
+
+      assert Repo.get(AnalysisSession, session.id) == nil
+    end
+
+    test "deleting workflow cascades to analysis sessions" do
+      session = DeliberationFixtures.analysis_session_fixture()
+      workflow = Repo.get!(Swarmshield.Deliberation.Workflow, session.workflow_id)
+
+      Repo.delete!(workflow)
+
+      assert Repo.get(AnalysisSession, session.id) == nil
+    end
+
+    test "deleting agent_event cascades to analysis sessions" do
+      session = DeliberationFixtures.analysis_session_fixture()
+      event = Repo.get!(Swarmshield.Gateway.AgentEvent, session.agent_event_id)
+
+      Repo.delete!(event)
+
+      assert Repo.get(AnalysisSession, session.id) == nil
+    end
+  end
+
   describe "fixture and database persistence" do
     test "creates a session with default attributes" do
       session = DeliberationFixtures.analysis_session_fixture()

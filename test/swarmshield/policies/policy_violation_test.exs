@@ -192,6 +192,26 @@ defmodule Swarmshield.Policies.PolicyViolationTest do
     end
   end
 
+  describe "FK cascade behavior" do
+    test "deleting agent_event cascades to its policy violations" do
+      violation = PoliciesFixtures.policy_violation_fixture()
+      event = Repo.get!(Swarmshield.Gateway.AgentEvent, violation.agent_event_id)
+
+      Repo.delete!(event)
+
+      assert Repo.get(PolicyViolation, violation.id) == nil
+    end
+
+    test "deleting policy_rule cascades to its violations" do
+      violation = PoliciesFixtures.policy_violation_fixture()
+      rule = Repo.get!(Swarmshield.Policies.PolicyRule, violation.policy_rule_id)
+
+      Repo.delete!(rule)
+
+      assert Repo.get(PolicyViolation, violation.id) == nil
+    end
+  end
+
   describe "fixture and database persistence" do
     test "creates a violation with default attributes" do
       violation = PoliciesFixtures.policy_violation_fixture()

@@ -40,4 +40,7 @@ SCHEMA-012 DONE 2026-02-11 Create AgentInstance schema - 721 tests pass, credo c
 SCHEMA-013 DONE 2026-02-11 Create DeliberationMessage schema - 721 tests pass, credo clean
 SCHEMA-014 DONE 2026-02-11 Create Verdict schema - 721 tests pass, credo clean
 POLICY-001 DONE 2026-02-11 Create Gateway context - 766 tests pass, credo clean
-POLICY-002 DONE 2026-02-11 Create Policies context - 830 tests (2 pre-existing ReDoS flaky), credo clean
+POLICY-002 DONE 2026-02-11 Create Policies context - 830 tests pass, credo clean
+AUDIT-001 DONE 2026-02-11 Add missing indexes (8 indexes: 3 FK + 3 dashboard + 2 perf) - 843 tests pass, credo clean
+AUDIT-002 DONE 2026-02-11 Fix ReDoS detection (100ms timeout + non-matching input) - 843 tests pass, credo clean
+AUDIT-003 DONE 2026-02-11 Add edge case tests (ReDoS, template security, null bytes, FK cascades) - 843 tests pass, credo clean

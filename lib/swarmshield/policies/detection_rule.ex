@@ -114,11 +114,14 @@ defmodule Swarmshield.Policies.DetectionRule do
     task =
       Task.async(fn ->
         regex = Regex.compile!(pattern)
-        pathological_input = String.duplicate("a", 1000)
+        # Test with non-matching input to trigger catastrophic backtracking.
+        # ReDoS only occurs when the engine must explore all possible paths
+        # before concluding there is no match. A matching input resolves instantly.
+        pathological_input = String.duplicate("a", 1000) <> "!"
         Regex.match?(regex, pathological_input)
       end)
 
-    case Task.yield(task, 1000) || Task.shutdown(task) do
+    case Task.yield(task, 100) || Task.shutdown(task) do
       {:ok, _result} ->
         changeset
 

@@ -315,6 +315,53 @@ defmodule Swarmshield.Policies.DetectionRuleTest do
     end
   end
 
+  describe "ReDoS protection" do
+    @tag timeout: 10_000
+    test "rejects regex patterns with catastrophic backtracking" do
+      # Classic ReDoS pattern: (a+)+$ with pathological input "aaa...b"
+      attrs =
+        PoliciesFixtures.valid_detection_rule_attributes(%{
+          detection_type: :regex,
+          pattern: "(a+)+$"
+        })
+
+      changeset = DetectionRule.changeset(%DetectionRule{}, attrs)
+
+      refute changeset.valid?
+      assert %{pattern: [msg]} = errors_on(changeset)
+      assert msg =~ "catastrophic backtracking"
+    end
+
+    @tag timeout: 10_000
+    test "accepts safe regex patterns that complete quickly" do
+      attrs =
+        PoliciesFixtures.valid_detection_rule_attributes(%{
+          detection_type: :regex,
+          pattern: "\\b(password|secret|api_key)\\b"
+        })
+
+      changeset = DetectionRule.changeset(%DetectionRule{}, attrs)
+
+      assert changeset.valid?
+    end
+
+    @tag timeout: 10_000
+    test "rejects nested quantifier ReDoS pattern" do
+      # Another common ReDoS: nested quantifiers
+      attrs =
+        PoliciesFixtures.valid_detection_rule_attributes(%{
+          detection_type: :regex,
+          pattern: "(a|a)*$"
+        })
+
+      changeset = DetectionRule.changeset(%DetectionRule{}, attrs)
+
+      refute changeset.valid?
+      assert %{pattern: [msg]} = errors_on(changeset)
+      assert msg =~ "catastrophic backtracking"
+    end
+  end
+
   describe "fixture and database persistence" do
     test "creates a detection rule with default attributes" do
       rule = PoliciesFixtures.detection_rule_fixture()

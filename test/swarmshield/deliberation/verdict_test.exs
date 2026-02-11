@@ -211,6 +211,17 @@ defmodule Swarmshield.Deliberation.VerdictTest do
     end
   end
 
+  describe "FK cascade behavior" do
+    test "deleting analysis session cascades to its verdict" do
+      verdict = DeliberationFixtures.verdict_fixture()
+      session = Repo.get!(Swarmshield.Deliberation.AnalysisSession, verdict.analysis_session_id)
+
+      Repo.delete!(session)
+
+      assert Repo.get(Verdict, verdict.id) == nil
+    end
+  end
+
   describe "fixture and database persistence" do
     test "creates a verdict with default attributes" do
       verdict = DeliberationFixtures.verdict_fixture()

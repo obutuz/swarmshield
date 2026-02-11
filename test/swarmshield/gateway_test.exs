@@ -680,6 +680,62 @@ defmodule Swarmshield.GatewayTest do
     end
   end
 
+  describe "null byte handling" do
+    test "content with null bytes is rejected by PostgreSQL" do
+      workspace = workspace_fixture()
+      agent = registered_agent_fixture(%{workspace_id: workspace.id})
+
+      # PostgreSQL rejects null bytes even though they're valid UTF-8
+      assert_raise Postgrex.Error, fn ->
+        Gateway.create_agent_event(workspace.id, agent.id, %{
+          event_type: :message,
+          content: "Hello\x00World"
+        })
+      end
+    end
+  end
+
+  describe "FK cascade behavior" do
+    test "deleting workspace cascades to registered agents" do
+      workspace = workspace_fixture()
+      agent = registered_agent_fixture(%{workspace_id: workspace.id})
+
+      Repo.delete!(workspace)
+
+      assert Repo.get(Swarmshield.Gateway.RegisteredAgent, agent.id) == nil
+    end
+
+    test "deleting workspace cascades to agent events" do
+      workspace = workspace_fixture()
+      agent = registered_agent_fixture(%{workspace_id: workspace.id})
+
+      {:ok, event} =
+        Gateway.create_agent_event(workspace.id, agent.id, %{
+          event_type: :action,
+          content: "test"
+        })
+
+      Repo.delete!(workspace)
+
+      assert Repo.get(Swarmshield.Gateway.AgentEvent, event.id) == nil
+    end
+
+    test "deleting registered agent cascades to its events" do
+      workspace = workspace_fixture()
+      agent = registered_agent_fixture(%{workspace_id: workspace.id})
+
+      {:ok, event} =
+        Gateway.create_agent_event(workspace.id, agent.id, %{
+          event_type: :action,
+          content: "test"
+        })
+
+      Repo.delete!(agent)
+
+      assert Repo.get(Swarmshield.Gateway.AgentEvent, event.id) == nil
+    end
+  end
+
   describe "update_agent_event_evaluation/2" do
     test "updates evaluation result on pending event" do
       workspace = workspace_fixture()

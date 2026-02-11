@@ -196,6 +196,62 @@ defmodule Swarmshield.Deliberation.PromptTemplateTest do
     end
   end
 
+  describe "render/2 security" do
+    test "Elixir code in variable values is not executed" do
+      # Ensure render uses String.replace, not Code.eval_string
+      result =
+        PromptTemplate.render(
+          "Result: {{code}}",
+          %{"code" => "System.cmd(\"rm\", [\"-rf\", \"/\"])"}
+        )
+
+      # The code string should be literally inserted, not executed
+      assert result == "Result: System.cmd(\"rm\", [\"-rf\", \"/\"])"
+    end
+
+    test "EEx-style tags in variable values are not evaluated" do
+      result =
+        PromptTemplate.render(
+          "Output: {{data}}",
+          %{"data" => "<%= System.halt() %>"}
+        )
+
+      assert result == "Output: <%= System.halt() %>"
+    end
+
+    test "Erlang function calls in variable values are treated as strings" do
+      result =
+        PromptTemplate.render(
+          "Value: {{input}}",
+          %{"input" => ":os.cmd('whoami')"}
+        )
+
+      assert result == "Value: :os.cmd('whoami')"
+    end
+
+    test "nested template syntax in variable values is not re-processed" do
+      result =
+        PromptTemplate.render(
+          "Hello {{name}}",
+          %{"name" => "{{malicious}}"}
+        )
+
+      # The inner {{malicious}} should be literal, not re-interpolated
+      assert result == "Hello {{malicious}}"
+    end
+
+    test "HTML/script injection in variables is passed through as-is" do
+      result =
+        PromptTemplate.render(
+          "Output: {{data}}",
+          %{"data" => "<script>alert('xss')</script>"}
+        )
+
+      # render/2 does not sanitize HTML - that's the template consumer's job
+      assert result == "Output: <script>alert('xss')</script>"
+    end
+  end
+
   describe "version auto-increment" do
     test "version does not increment on create (new record)" do
       attrs =
