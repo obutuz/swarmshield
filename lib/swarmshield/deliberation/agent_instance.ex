@@ -27,6 +27,7 @@ defmodule Swarmshield.Deliberation.AgentInstance do
     field :tokens_used, :integer, default: 0
     field :cost_cents, :integer, default: 0
     field :error_message, :string
+    field :terminated_at, :utc_datetime
 
     belongs_to :analysis_session, Swarmshield.Deliberation.AnalysisSession
     belongs_to :agent_definition, Swarmshield.Deliberation.AgentDefinition
@@ -47,7 +48,8 @@ defmodule Swarmshield.Deliberation.AgentInstance do
       :confidence,
       :tokens_used,
       :cost_cents,
-      :error_message
+      :error_message,
+      :terminated_at
     ])
     |> validate_required([:status])
     |> validate_confidence()

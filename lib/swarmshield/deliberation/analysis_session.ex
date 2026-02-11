@@ -25,6 +25,8 @@ defmodule Swarmshield.Deliberation.AnalysisSession do
     field :metadata, :map, default: %{}
     field :total_tokens_used, :integer, default: 0
     field :total_cost_cents, :integer, default: 0
+    field :input_content_hash, :string
+    field :expires_at, :utc_datetime
 
     belongs_to :workspace, Swarmshield.Accounts.Workspace
     belongs_to :workflow, Swarmshield.Deliberation.Workflow
@@ -59,7 +61,9 @@ defmodule Swarmshield.Deliberation.AnalysisSession do
       :completed_at,
       :error_message,
       :total_tokens_used,
-      :total_cost_cents
+      :total_cost_cents,
+      :input_content_hash,
+      :expires_at
     ])
     |> validate_required([:status])
   end

@@ -21,6 +21,7 @@ defmodule Swarmshield.Deliberation.Workflow do
     field :max_retries, :integer, default: 2
 
     belongs_to :workspace, Swarmshield.Accounts.Workspace
+    belongs_to :ghost_protocol_config, Swarmshield.GhostProtocol.Config
 
     has_many :workflow_steps, Swarmshield.Deliberation.WorkflowStep,
       preload_order: [asc: :position]
@@ -43,5 +44,6 @@ defmodule Swarmshield.Deliberation.Workflow do
       less_than_or_equal_to: 10
     )
     |> foreign_key_constraint(:workspace_id)
+    |> foreign_key_constraint(:ghost_protocol_config_id)
   end
 end

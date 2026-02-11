@@ -117,10 +117,16 @@ defmodule Swarmshield.DeliberationFixtures do
           {wid, rest}
       end
 
+    {ghost_protocol_config_id, attrs} =
+      Map.pop(attrs, :ghost_protocol_config_id)
+
     workflow_attrs = valid_workflow_attributes(attrs)
 
     {:ok, workflow} =
-      %Workflow{workspace_id: workspace_id}
+      %Workflow{
+        workspace_id: workspace_id,
+        ghost_protocol_config_id: ghost_protocol_config_id
+      }
       |> Workflow.changeset(workflow_attrs)
       |> Repo.insert()
 
