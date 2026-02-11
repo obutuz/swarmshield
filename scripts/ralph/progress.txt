@@ -57,3 +57,5 @@ SCHEMA-015 DONE 2026-02-11 Create GhostProtocolConfig schema and add FK to Workf
 AUDIT-004 DONE 2026-02-11 Add Phase 3 edge case tests (ReDoS timeout, window expiry, concurrent lookups, negative TTL, crash recovery) - 965 tests pass, credo clean
 GW-001 DONE 2026-02-11 Create ApiAuth plug (Bearer token auth, ETS cache lookup, async last_seen_at, audit trail, workspace validation) - 986 tests pass, credo clean
 GW-002 DONE 2026-02-11 Create API pipeline in router.ex (RequireJson, CorsHeaders, ApiSecurityHeaders, ApiRateLimit, HealthController) - 1019 tests pass, credo clean
+GW-003 DONE 2026-02-11 Create EventController (POST /api/v1/events with explicit param extraction, source_ip from conn, audit trail) - 1037 tests pass, credo clean
+GW-004 DONE 2026-02-11 Create EventJSON view module (index/show, no workspace_id exposure, ISO 8601 datetimes) - 1037 tests pass, credo clean

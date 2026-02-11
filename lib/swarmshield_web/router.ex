@@ -133,5 +133,7 @@ defmodule SwarmshieldWeb.Router do
 
   scope "/api/v1", SwarmshieldWeb.Api.V1 do
     pipe_through [:api, :api_auth]
+
+    post "/events", EventController, :create
   end
 end

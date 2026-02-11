@@ -92,7 +92,7 @@
       "title": "Create EventController",
       "description": "Controller handling POST /api/v1/events. Receives event data from external AI agents, validates input, creates AgentEvent record, and returns the created event.",
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "GW-002"
       ],
@@ -129,7 +129,7 @@
       "title": "Create EventJSON view module",
       "description": "JSON view module for rendering AgentEvent responses. Follows Phoenix 1.8 JSON view conventions.",
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "GW-003"
       ],

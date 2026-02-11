@@ -227,14 +227,23 @@ defmodule Swarmshield.Gateway do
   Creates an agent event and atomically increments the registered agent's
   event_count using `Repo.update_all(inc: ...)` to avoid read-modify-write races.
 
-  `workspace_id` and `registered_agent_id` are set server-side.
+  `workspace_id`, `registered_agent_id`, and `source_ip` are set server-side.
+
+  ## Options
+
+    * `:source_ip` - client IP address (extracted from conn.remote_ip)
   """
-  def create_agent_event(workspace_id, registered_agent_id, attrs)
+  def create_agent_event(workspace_id, registered_agent_id, attrs, opts \\ [])
+
+  def create_agent_event(workspace_id, registered_agent_id, attrs, opts)
       when is_binary(workspace_id) and is_binary(registered_agent_id) do
+    source_ip = Keyword.get(opts, :source_ip)
+
     Repo.transaction(fn ->
       event_result =
         %AgentEvent{workspace_id: workspace_id, registered_agent_id: registered_agent_id}
         |> AgentEvent.changeset(attrs)
+        |> maybe_set_source_ip(source_ip)
         |> Repo.insert()
 
       case event_result do
@@ -385,4 +394,10 @@ defmodule Swarmshield.Gateway do
 
   defp maybe_filter_event_to(query, %DateTime{} = to),
     do: where(query, [e], e.inserted_at <= ^to)
+
+  defp maybe_set_source_ip(changeset, nil), do: changeset
+
+  defp maybe_set_source_ip(changeset, source_ip) when is_binary(source_ip) do
+    Ecto.Changeset.change(changeset, %{source_ip: source_ip})
+  end
 end
