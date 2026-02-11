@@ -325,7 +325,7 @@
       "title": "Create GhostProtocolSessionLive (session lifecycle detail)",
       "description": "Detailed view of a single GhostProtocol ephemeral session lifecycle. Shows real-time spawn -> analyze -> debate -> verdict -> wipe -> dead lifecycle with agent status cards and wipe details.",
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "DASH-009"
       ],
