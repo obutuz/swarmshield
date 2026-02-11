@@ -57,7 +57,7 @@
       "title": "Create AgentEvent schema",
       "description": "AgentEvent captures a single action or output from a monitored AI agent. This is the primary data ingested through the API gateway. Events are evaluated against policy rules.",
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "SCHEMA-001"
       ],
@@ -92,7 +92,7 @@
       "title": "Create PolicyRule schema",
       "description": "PolicyRule defines an allow/flag/block rule for evaluating agent events. Rules are ETS-cached for sub-millisecond evaluation. Each rule has a type (rate_limit, pattern_match, blocklist, payload_size) and configuration.",
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "dependsOn": [],
       "acceptanceCriteria": [
         "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
@@ -123,7 +123,7 @@
       "title": "Create DetectionRule schema",
       "description": "DetectionRule defines a pattern matcher (regex or keyword list) used by pattern_match policy rules. Separated from PolicyRule for reusability - multiple policy rules can reference the same detection patterns.",
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "dependsOn": [],
       "acceptanceCriteria": [
         "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
@@ -156,7 +156,7 @@
       "title": "Create PolicyViolation schema",
       "description": "PolicyViolation records when an agent event matches a policy rule. Links the event to the rule that triggered and captures the evaluation details.",
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "SCHEMA-002",
         "SCHEMA-003"
@@ -191,7 +191,7 @@
       "title": "Create AgentDefinition schema",
       "description": "AgentDefinition describes an internal Opus 4.6 analyzer persona used in deliberation. Each definition specifies the agent's role, expertise, and system prompt for the LLM.",
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "dependsOn": [],
       "acceptanceCriteria": [
         "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
@@ -227,7 +227,7 @@
       "title": "Create PromptTemplate schema",
       "description": "PromptTemplate stores variable-interpolated prompt templates used by agent definitions during deliberation. Templates use {{variable}} syntax for dynamic content injection.",
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "dependsOn": [],
       "acceptanceCriteria": [
         "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
@@ -260,7 +260,7 @@
       "title": "Create Workflow schema",
       "description": "Workflow defines an analysis pipeline - an ordered sequence of steps that process a flagged event through multiple AI agents. Each workflow has a name, trigger conditions, and an associated consensus policy.",
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "dependsOn": [],
       "acceptanceCriteria": [
         "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
@@ -291,7 +291,7 @@
       "title": "Create WorkflowStep schema",
       "description": "WorkflowStep is an ordered step in a workflow pipeline. Each step references an agent definition and a prompt template. Steps can run in parallel or sequentially.",
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "SCHEMA-008",
         "SCHEMA-006"
@@ -326,7 +326,7 @@
       "title": "Create ConsensusPolicy schema",
       "description": "ConsensusPolicy defines the voting strategy for reaching a verdict after deliberation. Supports majority, supermajority, unanimous, and weighted voting strategies.",
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "dependsOn": [],
       "acceptanceCriteria": [
         "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
@@ -358,7 +358,7 @@
       "title": "Create AnalysisSession schema",
       "description": "AnalysisSession represents a single deliberation instance - multiple AI agents analyzing a flagged event and debating to reach a verdict. Tracks the session lifecycle from pending through analysis, deliberation, to verdict.",
       "priority": 11,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "SCHEMA-008",
         "SCHEMA-010"
@@ -395,7 +395,7 @@
       "title": "Create AgentInstance schema",
       "description": "AgentInstance represents a specific AI agent participating in an analysis session. Each instance is spawned from an AgentDefinition and tracks its individual analysis output.",
       "priority": 12,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "SCHEMA-011",
         "SCHEMA-006"
@@ -431,7 +431,7 @@
       "title": "Create DeliberationMessage schema",
       "description": "DeliberationMessage captures individual messages in the deliberation phase - agent analyses, counter-arguments, and supporting evidence. This is the debate transcript.",
       "priority": 13,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "SCHEMA-012"
       ],
@@ -463,7 +463,7 @@
       "title": "Create Verdict schema",
       "description": "Verdict is the final consensus decision from a deliberation session. Captures the collective vote, reasoning, and recommended action. One verdict per analysis session.",
       "priority": 14,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "SCHEMA-011"
       ],
