@@ -281,7 +281,7 @@
       "title": "Seed default roles and permissions",
       "description": "Seed file that creates the 4 default roles and all permissions. Must be idempotent. This is the foundation that all role-based access depends on.",
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "AUTH-006"
       ],
@@ -305,7 +305,7 @@
       "title": "Create workspace-scoped LiveView hooks",
       "description": "on_mount hooks that enforce workspace scope and permission checks in LiveViews. Every LiveView that displays workspace data must use these hooks to ensure proper authorization.",
       "priority": 11,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "AUTH-009"
       ],
@@ -382,7 +382,7 @@
       "title": "Post-login redirect and workspace resolution",
       "description": "After successful login, the system must determine where to send the user. If the user has no workspace, redirect to onboarding. If they have exactly one workspace, set it in session and go to dashboard. If they have multiple, show a workspace selector. This is the critical glue between authentication and the workspace-scoped application.",
       "priority": 13,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "AUTH-007",
         "AUTH-011"

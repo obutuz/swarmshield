@@ -56,7 +56,8 @@ defmodule SwarmshieldWeb.UserLive.LoginTest do
 
       conn = submit_form(form, conn)
 
-      assert redirected_to(conn) == ~p"/"
+      # User has no workspaces, so workspace resolver redirects to onboarding
+      assert redirected_to(conn) == "/onboarding"
     end
 
     test "redirects to login page with a flash error if credentials are invalid", %{

@@ -18,7 +18,8 @@ defmodule SwarmshieldWeb.UserSessionControllerTest do
         })
 
       assert get_session(conn, :user_token)
-      assert redirected_to(conn) == ~p"/"
+      # User has no workspaces, so workspace resolver redirects to onboarding
+      assert redirected_to(conn) == "/onboarding"
 
       # Now do a logged in request and assert on the menu
       conn = get(conn, ~p"/")
@@ -41,7 +42,7 @@ defmodule SwarmshieldWeb.UserSessionControllerTest do
         })
 
       assert conn.resp_cookies["_swarmshield_web_user_remember_me"]
-      assert redirected_to(conn) == ~p"/"
+      assert redirected_to(conn) == "/onboarding"
     end
 
     test "logs the user in with return to", %{conn: conn, user: user} do
@@ -82,7 +83,8 @@ defmodule SwarmshieldWeb.UserSessionControllerTest do
         })
 
       assert get_session(conn, :user_token)
-      assert redirected_to(conn) == ~p"/"
+      # User has no workspaces, so workspace resolver redirects to onboarding
+      assert redirected_to(conn) == "/onboarding"
 
       # Now do a logged in request and assert on the menu
       conn = get(conn, ~p"/")
@@ -103,7 +105,8 @@ defmodule SwarmshieldWeb.UserSessionControllerTest do
         })
 
       assert get_session(conn, :user_token)
-      assert redirected_to(conn) == ~p"/"
+      # User has no workspaces, so workspace resolver redirects to onboarding
+      assert redirected_to(conn) == "/onboarding"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "User confirmed successfully."
 
       assert Accounts.get_user!(user.id).confirmed_at

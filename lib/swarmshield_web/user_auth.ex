@@ -9,6 +9,7 @@ defmodule SwarmshieldWeb.UserAuth do
 
   alias Swarmshield.Accounts
   alias Swarmshield.Accounts.Scope
+  alias SwarmshieldWeb.Hooks.WorkspaceResolver
 
   # Make the remember me cookie valid for 14 days. This should match
   # the session validity setting in UserToken.
@@ -38,9 +39,13 @@ defmodule SwarmshieldWeb.UserAuth do
   def log_in_user(conn, user, params \\ %{}) do
     user_return_to = get_session(conn, :user_return_to)
 
-    conn
-    |> create_or_extend_session(user, params)
-    |> redirect(to: user_return_to || signed_in_path(conn))
+    conn = create_or_extend_session(conn, user, params)
+
+    if user_return_to do
+      redirect(conn, to: user_return_to)
+    else
+      WorkspaceResolver.resolve_and_redirect(conn, user)
+    end
   end
 
   @doc """
