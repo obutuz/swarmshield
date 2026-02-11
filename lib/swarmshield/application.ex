@@ -13,6 +13,7 @@ defmodule Swarmshield.Application do
       {DNSCluster, query: Application.get_env(:swarmshield, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Swarmshield.PubSub},
       Swarmshield.Authorization.AuthCache,
+      Swarmshield.Policies.PolicyCache,
       # Start to serve requests, typically the last entry
       SwarmshieldWeb.Endpoint
     ]
