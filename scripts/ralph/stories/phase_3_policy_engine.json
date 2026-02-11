@@ -384,7 +384,7 @@
       "title": "Seed default policy rules and detection rules",
       "description": "Seed file that creates sensible default policy rules and detection rules for a new workspace. These serve as starting templates that admins can customize.",
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "POLICY-002"
       ],

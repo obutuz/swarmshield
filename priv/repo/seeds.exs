@@ -11,3 +11,4 @@
 # and so on) as they will fail if something goes wrong.
 
 Code.require_file("seeds/roles_and_permissions.exs", __DIR__)
+Code.require_file("seeds/policy_rules.exs", __DIR__)

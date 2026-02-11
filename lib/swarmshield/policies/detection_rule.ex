@@ -61,6 +61,7 @@ defmodule Swarmshield.Policies.DetectionRule do
     |> validate_regex_compilation()
     |> validate_keywords_limits()
     |> foreign_key_constraint(:workspace_id)
+    |> unique_constraint([:workspace_id, :name])
   end
 
   defp validate_type_specific_fields(changeset) do

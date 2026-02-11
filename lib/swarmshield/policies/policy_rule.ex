@@ -54,6 +54,7 @@ defmodule Swarmshield.Policies.PolicyRule do
     |> validate_length(:description, max: 2000)
     |> validate_config_for_rule_type()
     |> foreign_key_constraint(:workspace_id)
+    |> unique_constraint([:workspace_id, :name])
   end
 
   defp validate_config_for_rule_type(changeset) do
