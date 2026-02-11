@@ -218,4 +218,93 @@ defmodule Swarmshield.Gateway.ApiKeyCacheTest do
       assert info1.workspace_id != info2.workspace_id
     end
   end
+
+  describe "concurrent lookups" do
+    test "parallel lookups for same key produce consistent results", %{workspace: workspace} do
+      agent = registered_agent_fixture(%{workspace_id: workspace.id, name: "concurrent-agent"})
+      key_hash = agent.api_key_hash
+
+      # Launch 20 concurrent lookups for the same key
+      tasks =
+        Enum.map(1..20, fn _i ->
+          Task.async(fn ->
+            ApiKeyCache.get_agent_by_key_hash(key_hash)
+          end)
+        end)
+
+      results = Task.await_many(tasks, 5_000)
+
+      # All results must be consistent - same agent_id
+      Enum.each(results, fn result ->
+        assert {:ok, info} = result
+        assert info.agent_id == agent.id
+        assert info.workspace_id == workspace.id
+      end)
+    end
+
+    test "parallel lookups for different keys do not interfere", %{workspace: workspace} do
+      agents =
+        Enum.map(1..5, fn i ->
+          registered_agent_fixture(%{workspace_id: workspace.id, name: "parallel-#{i}"})
+        end)
+
+      # Parallel lookups for all different keys
+      tasks =
+        Enum.map(agents, fn agent ->
+          Task.async(fn ->
+            {agent.id, ApiKeyCache.get_agent_by_key_hash(agent.api_key_hash)}
+          end)
+        end)
+
+      results = Task.await_many(tasks, 5_000)
+
+      # Each lookup returns the correct agent
+      Enum.each(results, fn {expected_id, result} ->
+        assert {:ok, info} = result
+        assert info.agent_id == expected_id
+      end)
+    end
+  end
+
+  describe "negative cache TTL expiry" do
+    test "expired negative cache entry is evicted on next lookup" do
+      fake_hash = :crypto.hash(:sha256, "ttl-test-key") |> Base.encode64()
+
+      # First lookup - cache miss, negative cached
+      assert {:error, :not_found} = ApiKeyCache.get_agent_by_key_hash(fake_hash)
+
+      # Verify it's in ETS
+      [{^fake_hash, :not_found, _inserted_at}] = :ets.lookup(:api_key_cache, fake_hash)
+
+      # Manually backdate the ETS entry by 61 seconds to simulate TTL expiry
+      # (avoids waiting 60 real seconds in a test)
+      now = System.monotonic_time(:second)
+      expired_at = now - 61
+      :ets.insert(:api_key_cache, {fake_hash, :not_found, expired_at})
+
+      # Next lookup should detect expiry, delete the stale entry, and re-query DB
+      # (DB still returns not_found, but the negative cache is refreshed)
+      assert {:error, :not_found} = ApiKeyCache.get_agent_by_key_hash(fake_hash)
+
+      # Verify the entry was refreshed with a new timestamp (not the backdated one)
+      [{^fake_hash, :not_found, new_inserted_at}] = :ets.lookup(:api_key_cache, fake_hash)
+      assert new_inserted_at > expired_at
+    end
+
+    test "non-expired negative cache entry is still served from cache" do
+      fake_hash = :crypto.hash(:sha256, "non-expired-key") |> Base.encode64()
+
+      # First lookup - negative cached
+      assert {:error, :not_found} = ApiKeyCache.get_agent_by_key_hash(fake_hash)
+
+      [{^fake_hash, :not_found, original_at}] = :ets.lookup(:api_key_cache, fake_hash)
+
+      # Immediately look up again - should hit negative cache (no DB query)
+      assert {:error, :not_found} = ApiKeyCache.get_agent_by_key_hash(fake_hash)
+
+      # Timestamp should be unchanged (served from cache, not refreshed)
+      [{^fake_hash, :not_found, still_same_at}] = :ets.lookup(:api_key_cache, fake_hash)
+      assert still_same_at == original_at
+    end
+  end
 end

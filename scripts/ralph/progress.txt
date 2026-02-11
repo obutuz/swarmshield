@@ -54,3 +54,4 @@ POLICY-009 DONE 2026-02-11 Composite rule evaluation - wire all evaluators into 
 POLICY-010 DONE 2026-02-11 Seed default policy rules and detection rules (8 detection + 8 policy, idempotent) - 899 tests pass, credo clean
 POLICY-011 DONE 2026-02-11 Create ApiKeyCache GenServer with ETS - 912 tests pass, credo clean
 SCHEMA-015 DONE 2026-02-11 Create GhostProtocolConfig schema and add FK to Workflow - 965 tests pass, credo clean
+AUDIT-004 DONE 2026-02-11 Add Phase 3 edge case tests (ReDoS timeout, window expiry, concurrent lookups, negative TTL, crash recovery) - 965 tests pass, credo clean

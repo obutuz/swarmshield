@@ -225,5 +225,90 @@ defmodule Swarmshield.Policies.Rules.PatternMatchTest do
       refute Map.has_key?(details, :matched_content)
       refute Map.has_key?(details, :content_snippet)
     end
+
+    test "ReDoS regex times out gracefully (100ms limit)", %{workspace: workspace} do
+      agent = registered_agent_fixture(%{workspace_id: workspace.id, name: "redos-agent"})
+
+      # Create a valid detection rule first, then modify pattern in-memory
+      # (changeset correctly rejects catastrophic backtracking patterns)
+      base_rule =
+        detection_rule_fixture(%{
+          workspace_id: workspace.id,
+          detection_type: :regex,
+          pattern: "safe_pattern",
+          enabled: true,
+          name: "redos-pattern"
+        })
+
+      # Replace with ReDoS pattern in-memory for testing evaluator timeout
+      redos_rule = %{base_rule | pattern: "(a+)+$"}
+
+      # Inject the modified rule directly into ETS cache
+      :ets.insert(:detection_rules_cache, {workspace.id, [redos_rule]})
+
+      # Long non-matching input causes catastrophic backtracking
+      # "aaa...ab" with enough 'a's triggers exponential backtracking
+      malicious_input = String.duplicate("a", 30) <> "b"
+
+      event =
+        agent_event_fixture(%{
+          workspace_id: workspace.id,
+          registered_agent_id: agent.id,
+          content: malicious_input
+        })
+
+      policy_rule =
+        policy_rule_fixture(%{
+          workspace_id: workspace.id,
+          rule_type: :pattern_match,
+          action: :block,
+          config: %{"detection_rule_ids" => [redos_rule.id]}
+        })
+
+      # Should return :no_match (timeout kills the regex) rather than blocking
+      # or hanging forever. The 100ms timeout protects against ReDoS.
+      assert {:ok, :no_match} = PatternMatch.evaluate(event, policy_rule)
+    end
+
+    test "invalid regex pattern is skipped gracefully", %{workspace: workspace} do
+      agent = registered_agent_fixture(%{workspace_id: workspace.id, name: "bad-regex-agent"})
+
+      # Create a detection rule with valid pattern first (changeset validates)
+      valid_rule =
+        detection_rule_fixture(%{
+          workspace_id: workspace.id,
+          detection_type: :regex,
+          pattern: "valid_pattern",
+          enabled: true,
+          name: "will-be-invalid"
+        })
+
+      # Modify pattern in-memory to simulate corrupted/invalid regex
+      # (changeset doesn't validate regex syntax - that's the evaluator's job)
+      invalid_rule = %{valid_rule | pattern: "[unclosed_bracket"}
+
+      # Manually insert the corrupted rule into ETS cache
+      cached_rules = PolicyCache.get_detection_rules(workspace.id)
+      updated_cache = [invalid_rule | cached_rules]
+      :ets.insert(:detection_rules_cache, {workspace.id, updated_cache})
+
+      event =
+        agent_event_fixture(%{
+          workspace_id: workspace.id,
+          registered_agent_id: agent.id,
+          content: "any content here"
+        })
+
+      policy_rule =
+        policy_rule_fixture(%{
+          workspace_id: workspace.id,
+          rule_type: :pattern_match,
+          action: :block,
+          config: %{"detection_rule_ids" => [invalid_rule.id]}
+        })
+
+      # Invalid regex should be skipped (return false from Regex.compile) - no crash
+      assert {:ok, :no_match} = PatternMatch.evaluate(event, policy_rule)
+    end
   end
 end

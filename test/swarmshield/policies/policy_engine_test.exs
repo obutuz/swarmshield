@@ -571,6 +571,74 @@ defmodule Swarmshield.Policies.PolicyEngineTest do
     end
   end
 
+  describe "evaluation resilience" do
+    test "rule evaluation crash is rescued and skipped", %{workspace: workspace, agent: agent} do
+      # Create a valid rule first, then corrupt config in-memory
+      # (changeset correctly validates config types)
+      valid_rule =
+        policy_rule_fixture(%{
+          workspace_id: workspace.id,
+          rule_type: :rate_limit,
+          action: :block,
+          priority: 50,
+          config: %{"max_events" => 100, "window_seconds" => 60}
+        })
+
+      # Corrupt the config in-memory to simulate a rule that will fail evaluation
+      corrupted_rule = %{
+        valid_rule
+        | config: %{"max_events" => "not_an_integer", "window_seconds" => "also_bad"}
+      }
+
+      # Inject corrupted rule directly into ETS cache
+      :ets.insert(:policy_rules_cache, {workspace.id, [corrupted_rule]})
+
+      event =
+        agent_event_fixture(%{
+          workspace_id: workspace.id,
+          registered_agent_id: agent.id,
+          content: "test event"
+        })
+
+      # The engine should rescue the error and treat it as :no_violation
+      {action, matched, details} = PolicyEngine.evaluate(event, workspace.id)
+      assert action == :allow
+      assert matched == []
+      assert details.evaluated_count == 1
+    end
+
+    test "duration_us accurately measures evaluation time", %{workspace: workspace, agent: agent} do
+      # Create multiple rules to ensure measurable duration
+      Enum.each(1..5, fn i ->
+        policy_rule_fixture(%{
+          workspace_id: workspace.id,
+          rule_type: :payload_size,
+          action: :flag,
+          priority: 10 + i,
+          name: "duration-rule-#{i}",
+          config: %{"max_content_bytes" => 999_999}
+        })
+      end)
+
+      PolicyCache.refresh(workspace.id)
+      _ = :sys.get_state(PolicyCache)
+      Process.sleep(600)
+
+      event =
+        agent_event_fixture(%{
+          workspace_id: workspace.id,
+          registered_agent_id: agent.id,
+          content: "small content"
+        })
+
+      {_action, _matched, details} = PolicyEngine.evaluate(event, workspace.id)
+
+      assert is_integer(details.duration_us)
+      assert details.duration_us >= 0
+      assert details.evaluated_count == 5
+    end
+  end
+
   describe "telemetry" do
     test "emits telemetry event on evaluation", %{event: event, workspace: workspace} do
       ref =
