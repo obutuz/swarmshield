@@ -137,6 +137,31 @@ defmodule Swarmshield.GhostProtocol do
     |> Repo.all()
   end
 
+  @doc """
+  Lists completed ephemeral sessions (wipe history) for a workspace.
+
+  Returns sessions that have completed and were linked to a ghost_protocol_config,
+  ordered by most recently completed. Preloads workflow with ghost_protocol_config.
+  """
+  def list_completed_ephemeral_sessions(workspace_id, opts \\ [])
+
+  def list_completed_ephemeral_sessions(workspace_id, opts) when is_binary(workspace_id) do
+    page_size = Keyword.get(opts, :page_size, 20) |> min(100) |> max(1)
+
+    from(s in AnalysisSession,
+      join: w in Workflow,
+      on: w.id == s.workflow_id,
+      where:
+        s.workspace_id == ^workspace_id and
+          s.status in [:completed, :failed, :timed_out] and
+          not is_nil(w.ghost_protocol_config_id),
+      preload: [workflow: {w, :ghost_protocol_config}],
+      order_by: [desc: s.completed_at, desc: s.inserted_at],
+      limit: ^page_size
+    )
+    |> Repo.all()
+  end
+
   def get_session_with_ghost_config(session_id) when is_binary(session_id) do
     from(s in AnalysisSession,
       where: s.id == ^session_id,

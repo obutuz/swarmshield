@@ -287,7 +287,7 @@
       "title": "Create GhostProtocolLive (active ephemeral sessions + wipe history)",
       "description": "GhostProtocol dashboard showing live ephemeral sessions with countdown timers, wipe status, and historical wipe data. This is the dedicated GhostProtocol operations view.",
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "DASH-001"
       ],
