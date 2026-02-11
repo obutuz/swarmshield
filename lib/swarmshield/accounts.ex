@@ -8,6 +8,9 @@ defmodule Swarmshield.Accounts do
 
   alias Swarmshield.Accounts.{
     AuditEntry,
+    Permission,
+    Role,
+    RolePermission,
     User,
     UserNotifier,
     UserToken,
@@ -17,6 +20,46 @@ defmodule Swarmshield.Accounts do
 
   @default_page_size 50
   @max_page_size 100
+
+  # Default permissions seeded for every SwarmShield deployment.
+  # Used by ensure_default_roles_and_permissions/0 and the seed file.
+  @default_permissions [
+    %{resource: "dashboard", action: "view", description: "View dashboard"},
+    %{resource: "dashboard", action: "export", description: "Export dashboard data"},
+    %{resource: "events", action: "view", description: "View events"},
+    %{resource: "events", action: "export", description: "Export events"},
+    %{resource: "agents", action: "view", description: "View agents"},
+    %{resource: "agents", action: "create", description: "Create agents"},
+    %{resource: "agents", action: "update", description: "Update agents"},
+    %{resource: "agents", action: "delete", description: "Delete agents"},
+    %{resource: "workflows", action: "view", description: "View workflows"},
+    %{resource: "workflows", action: "create", description: "Create workflows"},
+    %{resource: "workflows", action: "update", description: "Update workflows"},
+    %{resource: "workflows", action: "delete", description: "Delete workflows"},
+    %{resource: "policies", action: "view", description: "View policies"},
+    %{resource: "policies", action: "create", description: "Create policies"},
+    %{resource: "policies", action: "update", description: "Update policies"},
+    %{resource: "policies", action: "delete", description: "Delete policies"},
+    %{resource: "deliberations", action: "view", description: "View deliberations"},
+    %{resource: "deliberations", action: "trigger", description: "Trigger deliberations"},
+    %{resource: "deliberations", action: "export", description: "Export deliberations"},
+    %{resource: "audit", action: "view", description: "View audit log"},
+    %{resource: "audit", action: "export", description: "Export audit log"},
+    %{resource: "settings", action: "view", description: "View settings"},
+    %{resource: "settings", action: "update", description: "Update settings"}
+  ]
+
+  # Default roles seeded for every SwarmShield deployment.
+  @default_roles [
+    %{name: "super_admin", description: "Full system access", is_system: true},
+    %{
+      name: "admin",
+      description: "Administrative access (all except system settings)",
+      is_system: true
+    },
+    %{name: "analyst", description: "View, trigger, and export access", is_system: true},
+    %{name: "viewer", description: "Read-only access", is_system: true}
+  ]
 
   ## Database getters
 
@@ -454,6 +497,159 @@ defmodule Swarmshield.Accounts do
   defp hash_api_key(raw_key) do
     :crypto.hash(:sha256, raw_key) |> Base.encode16(case: :lower)
   end
+
+  @doc """
+  Returns a changeset for workspace form validation.
+  """
+  def change_workspace(%Workspace{} = workspace, attrs \\ %{}) do
+    Workspace.changeset(workspace, attrs)
+  end
+
+  @doc """
+  Gets a role by name. Returns `nil` if not found.
+  """
+  def get_role_by_name(name) when is_binary(name) do
+    Repo.get_by(Role, name: name)
+  end
+
+  @doc """
+  Ensures default roles and permissions exist in the database.
+  Idempotent - uses INSERT ... ON CONFLICT DO NOTHING for all records.
+
+  This function encapsulates the AUTH-010 seed logic so it can be called
+  from both the seed file and the onboarding flow.
+
+  Returns `:ok`.
+  """
+  def ensure_default_roles_and_permissions do
+    now = DateTime.utc_now(:second)
+
+    perm_records =
+      Enum.map(@default_permissions, &Map.merge(&1, %{inserted_at: now, updated_at: now}))
+
+    Repo.insert_all(Permission, perm_records,
+      on_conflict: :nothing,
+      conflict_target: [:resource, :action]
+    )
+
+    role_records =
+      Enum.map(@default_roles, &Map.merge(&1, %{inserted_at: now, updated_at: now}))
+
+    Repo.insert_all(Role, role_records,
+      on_conflict: :nothing,
+      conflict_target: [:name]
+    )
+
+    all_perms =
+      from(p in Permission, select: {fragment("? || ':' || ?", p.resource, p.action), p.id})
+      |> Repo.all()
+      |> Map.new()
+
+    all_roles =
+      from(r in Role, select: {r.name, r.id})
+      |> Repo.all()
+      |> Map.new()
+
+    seed_role_permission_assignments(all_roles, all_perms, now)
+
+    :ok
+  end
+
+  defp seed_role_permission_assignments(all_roles, all_perms, now) do
+    perm_keys = Map.keys(all_perms)
+
+    assignments = [
+      {"super_admin", perm_keys},
+      {"admin", Enum.reject(perm_keys, &(&1 == "settings:update"))},
+      {"analyst",
+       Enum.filter(perm_keys, fn key ->
+         String.ends_with?(key, ":view") or
+           String.ends_with?(key, ":trigger") or
+           String.ends_with?(key, ":export")
+       end)},
+      {"viewer", Enum.filter(perm_keys, &String.ends_with?(&1, ":view"))}
+    ]
+
+    for {role_name, keys} <- assignments, role_id = all_roles[role_name], role_id != nil do
+      records =
+        Enum.map(keys, fn key ->
+          %{
+            role_id: role_id,
+            permission_id: all_perms[key],
+            inserted_at: now,
+            updated_at: now
+          }
+        end)
+
+      Repo.insert_all(RolePermission, records,
+        on_conflict: :nothing,
+        conflict_target: [:role_id, :permission_id]
+      )
+    end
+  end
+
+  @doc """
+  Onboards a new workspace for a user. This is the complete onboarding transaction:
+
+  1. Ensures default roles and permissions exist
+  2. Creates the workspace
+  3. Assigns the user as super_admin
+  4. Generates an API key
+
+  Returns `{:ok, %{workspace: workspace, raw_api_key: raw_key}}` or `{:error, changeset}`.
+
+  The raw API key is returned exactly once and must be shown to the user immediately.
+  """
+  def onboard_workspace(%User{} = user, workspace_attrs) do
+    Repo.transact(fn ->
+      with :ok <- ensure_default_roles_and_permissions(),
+           {:ok, workspace} <-
+             %Workspace{}
+             |> Workspace.changeset(workspace_attrs)
+             |> Repo.insert(),
+           _ <-
+             create_audit_entry(%{
+               action: "workspace.create",
+               resource_type: "workspace",
+               resource_id: workspace.id,
+               actor_id: user.id,
+               metadata: %{"name" => workspace.name, "slug" => workspace.slug}
+             }),
+           {:ok, role} <- fetch_super_admin_role(),
+           {:ok, _uwr} <- assign_user_to_workspace(user, workspace, role),
+           {:ok, {raw_key, workspace}} <- generate_workspace_api_key(workspace) do
+        {:ok, %{workspace: workspace, raw_api_key: raw_key}}
+      end
+    end)
+  end
+
+  defp fetch_super_admin_role do
+    case get_role_by_name("super_admin") do
+      %Role{} = role -> {:ok, role}
+      nil -> {:error, :super_admin_role_not_found}
+    end
+  end
+
+  @doc """
+  Generates a URL-safe slug from a workspace name.
+
+  ## Examples
+
+      iex> generate_slug("My Workspace")
+      "my-workspace"
+
+      iex> generate_slug("Hello World!!!")
+      "hello-world"
+  """
+  def generate_slug(name) when is_binary(name) do
+    name
+    |> String.downcase()
+    |> String.replace(~r/[^a-z0-9]+/, "-")
+    |> String.replace(~r/-+/, "-")
+    |> String.trim("-")
+  end
+
+  def generate_slug(_), do: ""
 
   ## Role Assignments
 

@@ -414,7 +414,7 @@
       "title": "Onboarding flow - create first workspace",
       "description": "When a new user registers and has no workspace, they must create one before accessing the app. The onboarding flow creates a workspace, auto-assigns the user as super_admin, seeds default roles/permissions for the workspace, and redirects to the dashboard.",
       "priority": 14,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "AUTH-010",
         "AUTH-013"
