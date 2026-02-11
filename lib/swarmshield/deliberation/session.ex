@@ -16,6 +16,7 @@ defmodule Swarmshield.Deliberation.Session do
   alias Swarmshield.Accounts
   alias Swarmshield.Deliberation
   alias Swarmshield.Deliberation.{Consensus, PromptRenderer}
+  alias Swarmshield.GhostProtocol.WipeEngine
   alias Swarmshield.LLM.Client, as: LLMClient
   alias Swarmshield.Workflows
 
@@ -33,30 +34,22 @@ defmodule Swarmshield.Deliberation.Session do
   def start_session(event, workflow, opts \\ []) do
     with :ok <- validate_same_workspace(event, workflow) do
       case existing_session(event.id) do
-        {:ok, pid} ->
-          {:ok, pid}
-
-        :none ->
-          init_arg = %{
-            event: event,
-            workflow: workflow,
-            opts: opts
-          }
-
-          case DynamicSupervisor.start_child(
-                 Swarmshield.Deliberation.SessionSupervisor,
-                 {__MODULE__, init_arg}
-               ) do
-            {:ok, pid} ->
-              {:ok, pid}
-
-            {:error, {:already_started, pid}} ->
-              {:ok, pid}
-
-            {:error, _} = error ->
-              error
-          end
+        {:ok, pid} -> {:ok, pid}
+        :none -> start_new_session(event, workflow, opts)
       end
+    end
+  end
+
+  defp start_new_session(event, workflow, opts) do
+    init_arg = %{event: event, workflow: workflow, opts: opts}
+
+    case DynamicSupervisor.start_child(
+           Swarmshield.Deliberation.SessionSupervisor,
+           {__MODULE__, init_arg}
+         ) do
+      {:ok, pid} -> {:ok, pid}
+      {:error, {:already_started, pid}} -> {:ok, pid}
+      {:error, _} = error -> error
     end
   end
 
@@ -359,11 +352,10 @@ defmodule Swarmshield.Deliberation.Session do
     debate_summary =
       previous_messages
       |> Enum.take(-max_context_messages)
-      |> Enum.map(fn msg ->
+      |> Enum.map_join("\n\n", fn msg ->
         role = msg.agent_instance_id
         "[Agent #{String.slice(role || "unknown", 0..7)}] (#{msg.message_type}): #{msg.content}"
       end)
-      |> Enum.join("\n\n")
 
     # Preload all agent instances with definitions in a single query (avoid N+1)
     agent_ids = Enum.map(agents, & &1.id)
@@ -537,12 +529,10 @@ defmodule Swarmshield.Deliberation.Session do
   end
 
   defp execute_wipe(%{session_id: session_id}) do
-    try do
-      Swarmshield.GhostProtocol.WipeEngine.execute_wipe(session_id)
-    rescue
-      e ->
-        Logger.error("[Session] Wipe failed for #{session_id}: #{Exception.message(e)}")
-    end
+    WipeEngine.execute_wipe(session_id)
+  rescue
+    e ->
+      Logger.error("[Session] Wipe failed for #{session_id}: #{Exception.message(e)}")
   end
 
   defp force_terminate_expired(state) do
@@ -581,7 +571,7 @@ defmodule Swarmshield.Deliberation.Session do
       workspace_id: session.workspace_id,
       metadata: %{
         "reason" => "max_session_duration_exceeded",
-        "partial_verdict" => length(completed_agents) > 0
+        "partial_verdict" => completed_agents != []
       }
     })
 
@@ -634,19 +624,17 @@ defmodule Swarmshield.Deliberation.Session do
 
   defp load_consensus_policy(workflow, opts) do
     case Keyword.get(opts, :consensus_policy_id) do
-      nil ->
-        case workflow.workspace_id do
-          wid when is_binary(wid) ->
-            {policies, _count} = Workflows.list_consensus_policies(wid, page: 1, page_size: 1)
+      nil -> find_or_default_policy(workflow.workspace_id)
+      policy_id -> Workflows.get_consensus_policy!(policy_id)
+    end
+  end
 
-            case policies do
-              [policy | _] -> policy
-              [] -> default_consensus_policy()
-            end
-        end
+  defp find_or_default_policy(workspace_id) when is_binary(workspace_id) do
+    {policies, _count} = Workflows.list_consensus_policies(workspace_id, page: 1, page_size: 1)
 
-      policy_id ->
-        Workflows.get_consensus_policy!(policy_id)
+    case policies do
+      [policy | _] -> policy
+      [] -> default_consensus_policy()
     end
   end
 
@@ -706,30 +694,26 @@ defmodule Swarmshield.Deliberation.Session do
     DateTime.compare(DateTime.utc_now(:second), expires_at) != :lt
   end
 
-  defp render_system_prompt(agent_def, step) do
+  defp render_system_prompt(agent_def, %{prompt_template_id: nil}) do
+    agent_def.system_prompt || "You are a security analyst."
+  end
+
+  defp render_system_prompt(agent_def, %{prompt_template: nil}) do
+    agent_def.system_prompt || "You are a security analyst."
+  end
+
+  defp render_system_prompt(agent_def, %{prompt_template: template}) do
     base_prompt = agent_def.system_prompt || "You are a security analyst."
 
-    case step.prompt_template_id do
-      nil ->
-        base_prompt
+    variables = %{
+      "system_prompt" => base_prompt,
+      "role" => agent_def.role || "analyst",
+      "expertise" => Enum.join(agent_def.expertise || [], ", ")
+    }
 
-      _template_id ->
-        template = step.prompt_template
-
-        case template do
-          nil ->
-            base_prompt
-
-          t ->
-            case PromptRenderer.render(t.template, %{
-                   "system_prompt" => base_prompt,
-                   "role" => agent_def.role || "analyst",
-                   "expertise" => Enum.join(agent_def.expertise || [], ", ")
-                 }) do
-              {:ok, rendered} -> rendered
-              _ -> base_prompt
-            end
-        end
+    case PromptRenderer.render(template.template, variables) do
+      {:ok, rendered} -> rendered
+      _ -> base_prompt
     end
   end
 
@@ -750,18 +734,27 @@ defmodule Swarmshield.Deliberation.Session do
 
   defp parse_llm_vote(_), do: {nil, nil}
 
-  defp extract_vote(text) do
-    upper = String.upcase(text)
+  @vote_pattern ~r/VOTE\s*:\s*(BLOCK|FLAG|ALLOW)/i
+  @verdict_pattern ~r/VERDICT.*?(BLOCK|FLAG)/i
 
-    cond do
-      String.contains?(upper, "VOTE: BLOCK") or String.contains?(upper, "VOTE:BLOCK") -> :block
-      String.contains?(upper, "VOTE: FLAG") or String.contains?(upper, "VOTE:FLAG") -> :flag
-      String.contains?(upper, "VOTE: ALLOW") or String.contains?(upper, "VOTE:ALLOW") -> :allow
-      String.contains?(upper, "BLOCK") and String.contains?(upper, "VERDICT") -> :block
-      String.contains?(upper, "FLAG") and String.contains?(upper, "VERDICT") -> :flag
-      true -> :flag
+  defp extract_vote(text) do
+    case Regex.run(@vote_pattern, text) do
+      [_, match] -> vote_from_string(String.upcase(match))
+      nil -> extract_vote_from_verdict(text)
     end
   end
+
+  defp extract_vote_from_verdict(text) do
+    case Regex.run(@verdict_pattern, text) do
+      [_, match] -> vote_from_string(String.upcase(match))
+      nil -> :flag
+    end
+  end
+
+  defp vote_from_string("BLOCK"), do: :block
+  defp vote_from_string("FLAG"), do: :flag
+  defp vote_from_string("ALLOW"), do: :allow
+  defp vote_from_string(_), do: :flag
 
   defp extract_confidence(text) do
     case Regex.run(~r/(?:CONFIDENCE|confidence)[:\s]*([01]\.?\d*)/, text) do

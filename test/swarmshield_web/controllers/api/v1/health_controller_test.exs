@@ -14,22 +14,39 @@ defmodule SwarmshieldWeb.Api.V1.HealthControllerTest do
   end
 
   describe "GET /api/v1/health" do
-    test "returns 200 with status ok", %{conn: conn} do
-      conn = get(conn, ~p"/api/v1/health")
+    test "returns 200 with status ok and database healthy", %{conn: conn} do
+      body = conn |> get(~p"/api/v1/health") |> json_response(200)
 
-      assert json_response(conn, 200)["status"] == "ok"
+      assert body["status"] == "ok"
     end
 
-    test "returns version in response", %{conn: conn} do
-      conn = get(conn, ~p"/api/v1/health")
+    test "returns version from Application.spec (not Mix.Project)", %{conn: conn} do
+      body = conn |> get(~p"/api/v1/health") |> json_response(200)
 
-      body = json_response(conn, 200)
       assert is_binary(body["version"])
+      assert body["version"] =~ ~r/^\d+\.\d+\.\d+/
+    end
+
+    test "returns valid ISO 8601 UTC timestamp", %{conn: conn} do
+      body = conn |> get(~p"/api/v1/health") |> json_response(200)
+
+      assert is_binary(body["timestamp"])
+      assert {:ok, %DateTime{}, _} = DateTime.from_iso8601(body["timestamp"])
     end
 
     test "does not require authentication", %{conn: conn} do
       conn = get(conn, ~p"/api/v1/health")
       assert conn.status == 200
+    end
+
+    test "does NOT expose Elixir version, OTP version, or internal IPs", %{conn: conn} do
+      body = conn |> get(~p"/api/v1/health") |> json_response(200)
+
+      refute Map.has_key?(body, "elixir_version")
+      refute Map.has_key?(body, "otp_version")
+      refute Map.has_key?(body, "ip")
+      refute Map.has_key?(body, "database_version")
+      refute Map.has_key?(body, "node")
     end
 
     test "includes security headers", %{conn: conn} do

@@ -8,7 +8,14 @@ defmodule SwarmshieldWeb.ChangesetJSON do
 
   defp translate_error({msg, opts}) do
     Regex.replace(~r"%{(\w+)}", msg, fn _, key ->
-      opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
+      interpolate_key(key, opts)
     end)
+  end
+
+  defp interpolate_key(key, opts) do
+    atom_key = String.to_existing_atom(key)
+    opts |> Keyword.get(atom_key, key) |> to_string()
+  rescue
+    ArgumentError -> key
   end
 end

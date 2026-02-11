@@ -3,6 +3,7 @@ defmodule Swarmshield.Deliberation.SessionTest do
 
   alias Swarmshield.Deliberation
   alias Swarmshield.Deliberation.Session
+  alias Swarmshield.LLM
 
   import Swarmshield.AccountsFixtures
   import Swarmshield.DeliberationFixtures
@@ -101,7 +102,7 @@ defmodule Swarmshield.Deliberation.SessionTest do
         Deliberation.list_analysis_sessions(workspace.id)
         |> elem(0)
 
-      assert length(sessions) >= 1
+      assert [_ | _] = sessions
       session = Enum.find(sessions, &(&1.agent_event_id == event.id))
       assert session != nil
       assert session.status in [:completed, :failed]
@@ -138,7 +139,7 @@ defmodule Swarmshield.Deliberation.SessionTest do
 
       # The session exists in the DB
       {sessions, _} = Deliberation.list_analysis_sessions(workspace.id)
-      assert length(sessions) >= 1
+      assert [_ | _] = sessions
 
       Process.exit(pid, :kill)
     end
@@ -213,16 +214,14 @@ defmodule Swarmshield.Deliberation.SessionTest do
       session = Enum.find(sessions, &(&1.agent_event_id == event.id))
 
       agents = Deliberation.list_agent_instances(session.id)
-      assert length(agents) >= 1
-
-      [agent | _] = agents
+      assert [agent | _] = agents
       assert agent.status == :completed
       assert agent.vote != nil
       assert agent.initial_assessment != nil
 
       messages = Deliberation.list_messages_by_session(session.id)
       analysis_messages = Enum.filter(messages, &(&1.message_type == :analysis))
-      assert length(analysis_messages) >= 1
+      assert [_ | _] = analysis_messages
     end
 
     test "handles agent failure gracefully with partial results", %{workspace: workspace} do
@@ -355,8 +354,8 @@ defmodule Swarmshield.Deliberation.SessionTest do
       analysis_msgs = Enum.filter(messages, &(&1.message_type == :analysis))
       argument_msgs = Enum.filter(messages, &(&1.message_type == :argument))
 
-      assert length(analysis_msgs) >= 1
-      assert length(argument_msgs) >= 1
+      assert [_ | _] = analysis_msgs
+      assert [_ | _] = argument_msgs
     end
 
     test "0 deliberation rounds skips deliberation phase", %{workspace: workspace} do
@@ -488,9 +487,8 @@ defmodule Swarmshield.Deliberation.SessionTest do
 
   describe "build_context" do
     test "build_context creates proper ReqLLM context" do
-      context = Swarmshield.LLM.Client.build_context("system prompt", "user content")
-      messages = ReqLLM.Context.to_list(context)
-      assert length(messages) == 2
+      context = LLM.Client.build_context("system prompt", "user content")
+      assert [_, _] = ReqLLM.Context.to_list(context)
     end
   end
 end

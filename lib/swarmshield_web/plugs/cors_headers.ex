@@ -38,23 +38,32 @@ defmodule SwarmshieldWeb.Plugs.CorsHeaders do
     |> put_resp_header("access-control-allow-methods", @allowed_methods)
     |> put_resp_header("access-control-allow-headers", @allowed_headers)
     |> put_resp_header("access-control-max-age", to_string(max_age()))
+    |> maybe_set_vary_origin(origin)
   end
+
+  # When reflecting a specific origin (not "*"), set Vary: Origin so caching
+  # proxies/CDNs don't serve the wrong CORS response to different origins.
+  defp maybe_set_vary_origin(conn, "*"), do: conn
+  defp maybe_set_vary_origin(conn, _origin), do: put_resp_header(conn, "vary", "origin")
 
   defp get_allowed_origin(conn) do
     request_origin = get_req_header(conn, "origin") |> List.first("")
 
     case allowed_origins() do
+      [] ->
+        ""
+
       ["*"] ->
         "*"
 
       origins when is_list(origins) ->
-        if request_origin in origins, do: request_origin, else: List.first(origins, "")
+        if request_origin in origins, do: request_origin, else: ""
     end
   end
 
   defp allowed_origins do
     Application.get_env(:swarmshield, __MODULE__, [])
-    |> Keyword.get(:allowed_origins, ["*"])
+    |> Keyword.get(:allowed_origins, [])
   end
 
   defp max_age do

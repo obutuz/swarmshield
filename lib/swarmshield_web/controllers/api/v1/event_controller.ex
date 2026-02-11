@@ -18,11 +18,12 @@ defmodule SwarmshieldWeb.Api.V1.EventController do
            source_ip: source_ip
          ) do
       {:ok, event} ->
-        audit_event_creation(agent_info, workspace, event)
+        {:ok, evaluated_event} = Gateway.evaluate_event(event, workspace.id)
+        audit_event_creation(agent_info, workspace, evaluated_event)
 
         conn
         |> put_status(:created)
-        |> render(:show, event: event)
+        |> render(:show, event: evaluated_event)
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:error, changeset}

@@ -98,11 +98,7 @@ defmodule Swarmshield.Deliberation do
       case result do
         {:ok, updated} ->
           broadcast_session_change(updated, :session_updated)
-
-          if new_status in [:completed, :failed, :timed_out] do
-            audit_session_lifecycle(updated, "deliberation.session_#{new_status}")
-          end
-
+          maybe_audit_terminal_status(updated, new_status)
           {:ok, updated}
 
         error ->
@@ -241,6 +237,14 @@ defmodule Swarmshield.Deliberation do
   def subscribe_to_workspace_deliberations(workspace_id) when is_binary(workspace_id) do
     Phoenix.PubSub.subscribe(Swarmshield.PubSub, "deliberations:#{workspace_id}")
   end
+
+  @terminal_statuses [:completed, :failed, :timed_out]
+
+  defp maybe_audit_terminal_status(session, status) when status in @terminal_statuses do
+    audit_session_lifecycle(session, "deliberation.session_#{status}")
+  end
+
+  defp maybe_audit_terminal_status(_session, _status), do: :ok
 
   defp broadcast_session_change(%AnalysisSession{} = session, event) do
     Phoenix.PubSub.broadcast(

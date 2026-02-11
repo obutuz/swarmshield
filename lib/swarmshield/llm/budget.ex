@@ -54,12 +54,10 @@ defmodule Swarmshield.LLM.Budget do
     usage = get_usage(workspace_id, table: table)
     limit_cents = get_budget_limit(workspace_id, opts)
 
-    cond do
-      usage.total_cost_cents >= limit_cents ->
-        {:error, :budget_exceeded}
-
-      true ->
-        {:ok, limit_cents - usage.total_cost_cents}
+    if usage.total_cost_cents >= limit_cents do
+      {:error, :budget_exceeded}
+    else
+      {:ok, limit_cents - usage.total_cost_cents}
     end
   end
 
@@ -265,52 +263,46 @@ defmodule Swarmshield.LLM.Budget do
   end
 
   defp read_cached_limit(workspace_id, cache) do
-    try do
-      case :ets.lookup(cache, {:limit, workspace_id}) do
-        [{_, limit, cached_at}] ->
-          age_ms = DateTime.diff(DateTime.utc_now(:second), cached_at, :millisecond)
+    case :ets.lookup(cache, {:limit, workspace_id}) do
+      [{_, limit, cached_at}] ->
+        age_ms = DateTime.diff(DateTime.utc_now(:second), cached_at, :millisecond)
 
-          if age_ms < @budget_cache_ttl_ms do
-            {:ok, limit}
-          else
-            :miss
-          end
-
-        [] ->
+        if age_ms < @budget_cache_ttl_ms do
+          {:ok, limit}
+        else
           :miss
-      end
-    rescue
-      ArgumentError -> :miss
+        end
+
+      [] ->
+        :miss
     end
+  rescue
+    ArgumentError -> :miss
   end
 
   defp write_cached_limit(workspace_id, limit, cache) do
-    try do
-      :ets.insert(cache, {{:limit, workspace_id}, limit, DateTime.utc_now(:second)})
-    rescue
-      ArgumentError -> :ok
-    end
+    :ets.insert(cache, {{:limit, workspace_id}, limit, DateTime.utc_now(:second)})
+  rescue
+    ArgumentError -> :ok
   end
 
   defp fetch_limit_from_db(workspace_id) do
-    try do
-      import Ecto.Query, warn: false
+    import Ecto.Query, warn: false
 
-      case Repo.one(
-             from(w in "workspaces",
-               where: w.id == type(^workspace_id, :binary_id),
-               select: w.settings
-             )
-           ) do
-        %{"llm_budget_limit_cents" => limit} when is_integer(limit) and limit > 0 ->
-          limit
+    case Repo.one(
+           from(w in "workspaces",
+             where: w.id == type(^workspace_id, :binary_id),
+             select: w.settings
+           )
+         ) do
+      %{"llm_budget_limit_cents" => limit} when is_integer(limit) and limit > 0 ->
+        limit
 
-        _ ->
-          @default_budget_limit_cents
-      end
-    rescue
-      _ -> @default_budget_limit_cents
+      _ ->
+        @default_budget_limit_cents
     end
+  rescue
+    _ -> @default_budget_limit_cents
   end
 
   defp load_existing_usage(table) do

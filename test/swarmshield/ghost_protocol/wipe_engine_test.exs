@@ -1,10 +1,10 @@
 defmodule Swarmshield.GhostProtocol.WipeEngineTest do
   use Swarmshield.DataCase, async: true
 
-  alias Swarmshield.GhostProtocol.WipeEngine
+  alias Swarmshield.Accounts.AuditEntry
   alias Swarmshield.Deliberation.{AgentInstance, AnalysisSession, DeliberationMessage, Verdict}
   alias Swarmshield.Gateway.AgentEvent
-  alias Swarmshield.Accounts.AuditEntry
+  alias Swarmshield.GhostProtocol.WipeEngine
 
   import Swarmshield.AccountsFixtures
   import Swarmshield.DeliberationFixtures

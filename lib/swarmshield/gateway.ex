@@ -7,10 +7,16 @@ defmodule Swarmshield.Gateway do
   operations are workspace-scoped for multi-tenant isolation.
   """
 
+  require Logger
+
   import Ecto.Query, warn: false
   alias Swarmshield.Repo
 
+  alias Swarmshield.Accounts
   alias Swarmshield.Gateway.{AgentEvent, RegisteredAgent}
+  alias Swarmshield.Policies
+  alias Swarmshield.Policies.PolicyEngine
+  alias Swarmshield.Workflows
 
   @default_page_size 50
   @max_page_size 100
@@ -310,6 +316,69 @@ defmodule Swarmshield.Gateway do
     {:error, "cannot update evaluation for event with status #{status}"}
   end
 
+  @doc """
+  Evaluates a pending event against cached policy rules and updates its status.
+
+  Flow: evaluate via PolicyEngine -> update event status -> create PolicyViolation
+  records for flagged/blocked events.
+
+  On PolicyEngine failure: event stays :pending, no crash.
+  Returns `{:ok, updated_event}` on success or `{:ok, original_event}` on
+  evaluation failure (event remains :pending).
+  """
+  def evaluate_event(%AgentEvent{status: :pending} = event, workspace_id)
+      when is_binary(workspace_id) do
+    {action, matched_rules, details} = PolicyEngine.evaluate(event, workspace_id)
+
+    status = action_to_status(action)
+    now = DateTime.utc_now(:second)
+
+    evaluation_result = %{
+      "action" => to_string(action),
+      "matched_rules" => sanitize_matched_rules(matched_rules),
+      "evaluated_count" => details.evaluated_count,
+      "block_count" => details.block_count,
+      "flag_count" => details.flag_count,
+      "duration_us" => details.duration_us
+    }
+
+    flagged_reason = build_flagged_reason(action, matched_rules)
+
+    case update_agent_event_evaluation(event, %{
+           status: status,
+           evaluation_result: evaluation_result,
+           evaluated_at: now,
+           flagged_reason: flagged_reason
+         }) do
+      {:ok, updated_event} ->
+        violations =
+          create_violations_for_matched_rules(
+            workspace_id,
+            updated_event,
+            action,
+            matched_rules
+          )
+
+        broadcast_event_created(updated_event, workspace_id)
+        broadcast_violations_created(violations, workspace_id, action)
+        maybe_trigger_deliberation(updated_event, workspace_id, action)
+
+        {:ok, updated_event}
+
+      {:error, _reason} ->
+        {:ok, event}
+    end
+  catch
+    _kind, _reason ->
+      Logger.warning(
+        "[Gateway] PolicyEngine evaluation failed for event #{event.id}, staying :pending"
+      )
+
+      {:ok, event}
+  end
+
+  def evaluate_event(%AgentEvent{} = event, _workspace_id), do: {:ok, event}
+
   # ---------------------------------------------------------------------------
   # Private helpers
   # ---------------------------------------------------------------------------
@@ -399,5 +468,148 @@ defmodule Swarmshield.Gateway do
 
   defp maybe_set_source_ip(changeset, source_ip) when is_binary(source_ip) do
     Ecto.Changeset.change(changeset, %{source_ip: source_ip})
+  end
+
+  # PolicyEngine evaluation helpers
+
+  defp action_to_status(:allow), do: :allowed
+  defp action_to_status(:flag), do: :flagged
+  defp action_to_status(:block), do: :blocked
+
+  defp sanitize_matched_rules(matched_rules) do
+    Enum.map(matched_rules, fn rule ->
+      %{
+        "rule_id" => rule.rule_id,
+        "rule_name" => rule.rule_name,
+        "action" => to_string(rule.action),
+        "rule_type" => to_string(rule.rule_type)
+      }
+    end)
+  end
+
+  defp build_flagged_reason(:allow, _matched_rules), do: nil
+
+  defp build_flagged_reason(action, matched_rules) do
+    rule_names = Enum.map(matched_rules, & &1.rule_name)
+
+    "#{action}: matched #{length(matched_rules)} rule(s) - #{Enum.join(rule_names, ", ")}"
+  end
+
+  defp create_violations_for_matched_rules(_workspace_id, _event, :allow, _matched_rules), do: []
+
+  defp create_violations_for_matched_rules(workspace_id, event, action, matched_rules) do
+    action_taken = action_to_violation_action(action)
+    severity = action_to_violation_severity(action)
+
+    Enum.reduce(matched_rules, [], fn rule_match, acc ->
+      try do
+        case Policies.create_policy_violation(%{
+               workspace_id: workspace_id,
+               agent_event_id: event.id,
+               policy_rule_id: rule_match.rule_id,
+               action_taken: action_taken,
+               severity: severity,
+               details: %{
+                 "rule_name" => rule_match.rule_name,
+                 "rule_type" => to_string(rule_match.rule_type)
+               }
+             }) do
+          {:ok, violation} -> [violation | acc]
+          {:error, _changeset} -> acc
+        end
+      catch
+        _kind, _reason ->
+          Logger.warning(
+            "[Gateway] Failed to create violation for event #{event.id}, rule #{rule_match.rule_id}"
+          )
+
+          acc
+      end
+    end)
+  end
+
+  defp action_to_violation_action(:flag), do: :flagged
+  defp action_to_violation_action(:block), do: :blocked
+
+  defp action_to_violation_severity(:block), do: :high
+  defp action_to_violation_severity(:flag), do: :medium
+
+  # PubSub broadcasts for real-time dashboard updates
+
+  defp broadcast_event_created(event, workspace_id) do
+    event_with_agent = Repo.preload(event, :registered_agent)
+
+    Phoenix.PubSub.broadcast(
+      Swarmshield.PubSub,
+      "events:#{workspace_id}",
+      {:event_created, event_with_agent}
+    )
+  rescue
+    _ -> :ok
+  end
+
+  defp broadcast_violations_created(_violations, _workspace_id, :allow), do: :ok
+
+  defp broadcast_violations_created(violations, workspace_id, _action) do
+    # Batch preload to avoid N+1 (one query for all violations, not one per violation)
+    violations_with_preloads = Repo.preload(violations, [:agent_event, :policy_rule])
+
+    Enum.each(violations_with_preloads, fn violation ->
+      Phoenix.PubSub.broadcast(
+        Swarmshield.PubSub,
+        "violations:#{workspace_id}",
+        {:violation_created, violation}
+      )
+    end)
+  rescue
+    _ -> :ok
+  end
+
+  # Deliberation trigger - only for flagged events, async via Task.Supervisor
+
+  defp maybe_trigger_deliberation(_event, _workspace_id, :allow), do: :ok
+  defp maybe_trigger_deliberation(_event, _workspace_id, :block), do: :ok
+
+  defp maybe_trigger_deliberation(event, workspace_id, :flag) do
+    event_id = event.id
+
+    Task.Supervisor.start_child(
+      Swarmshield.TaskSupervisor,
+      fn ->
+        try do
+          do_trigger_deliberation(event_id, workspace_id)
+        catch
+          _kind, _reason -> :ok
+        end
+      end
+    )
+
+    :ok
+  end
+
+  defp do_trigger_deliberation(event_id, workspace_id) do
+    case Workflows.get_enabled_workflow_for_trigger(workspace_id, :flagged) do
+      nil ->
+        :ok
+
+      workflow ->
+        Phoenix.PubSub.broadcast(
+          Swarmshield.PubSub,
+          "deliberations:#{workspace_id}",
+          {:trigger_deliberation, event_id, workflow}
+        )
+
+        Accounts.create_audit_entry(%{
+          action: "deliberation.auto_triggered",
+          resource_type: "agent_event",
+          resource_id: event_id,
+          workspace_id: workspace_id,
+          metadata: %{
+            "workflow_id" => workflow.id,
+            "workflow_name" => workflow.name,
+            "trigger" => "flagged_event"
+          }
+        })
+    end
   end
 end

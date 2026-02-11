@@ -27,7 +27,35 @@ defmodule SwarmshieldWeb.Plugs.CorsHeadersTest do
     end
   end
 
+  describe "origin matching with no config (default)" do
+    test "returns empty origin when no allowed_origins configured", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("origin", "https://example.com")
+        |> CorsHeaders.call([])
+
+      [origin] = get_resp_header(conn, "access-control-allow-origin")
+      assert origin == ""
+    end
+  end
+
   describe "origin matching with wildcard config" do
+    setup do
+      original = Application.get_env(:swarmshield, CorsHeaders)
+
+      Application.put_env(:swarmshield, CorsHeaders, allowed_origins: ["*"])
+
+      on_exit(fn ->
+        if original do
+          Application.put_env(:swarmshield, CorsHeaders, original)
+        else
+          Application.delete_env(:swarmshield, CorsHeaders)
+        end
+      end)
+
+      :ok
+    end
+
     test "returns * when configured with wildcard", %{conn: conn} do
       conn =
         conn
@@ -36,6 +64,15 @@ defmodule SwarmshieldWeb.Plugs.CorsHeadersTest do
 
       [origin] = get_resp_header(conn, "access-control-allow-origin")
       assert origin == "*"
+    end
+
+    test "does not set Vary: Origin header for wildcard", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("origin", "https://example.com")
+        |> CorsHeaders.call([])
+
+      assert get_resp_header(conn, "vary") == []
     end
   end
 
@@ -68,14 +105,32 @@ defmodule SwarmshieldWeb.Plugs.CorsHeadersTest do
       assert origin == "https://app.swarmshield.io"
     end
 
-    test "returns first allowed origin for non-matching request", %{conn: conn} do
+    test "sets Vary: Origin for specific origin matches", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("origin", "https://app.swarmshield.io")
+        |> CorsHeaders.call([])
+
+      assert get_resp_header(conn, "vary") == ["origin"]
+    end
+
+    test "sets Vary: Origin even for non-matching origin", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("origin", "https://evil.com")
+        |> CorsHeaders.call([])
+
+      assert get_resp_header(conn, "vary") == ["origin"]
+    end
+
+    test "returns empty string for non-matching origin", %{conn: conn} do
       conn =
         conn
         |> put_req_header("origin", "https://evil.com")
         |> CorsHeaders.call([])
 
       [origin] = get_resp_header(conn, "access-control-allow-origin")
-      assert origin == "https://app.swarmshield.io"
+      assert origin == ""
     end
   end
 end

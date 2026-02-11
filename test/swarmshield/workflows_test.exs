@@ -1,8 +1,8 @@
 defmodule Swarmshield.WorkflowsTest do
   use Swarmshield.DataCase, async: true
 
-  alias Swarmshield.Workflows
   alias Swarmshield.Deliberation.{ConsensusPolicy, Workflow, WorkflowStep}
+  alias Swarmshield.Workflows
 
   import Swarmshield.AccountsFixtures, only: [workspace_fixture: 0]
   import Swarmshield.DeliberationFixtures

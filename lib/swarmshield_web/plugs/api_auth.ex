@@ -47,31 +47,31 @@ defmodule SwarmshieldWeb.Plugs.ApiAuth do
       |> assign(:current_workspace, workspace)
     else
       {:error, :missing_authorization} ->
-        audit_auth_failure(conn, "missing_authorization", nil)
+        audit_auth_failure(conn, "missing_authorization")
         respond_unauthorized(conn, "missing_credentials")
 
       {:error, :invalid_format} ->
-        audit_auth_failure(conn, "invalid_format", nil)
+        audit_auth_failure(conn, "invalid_format")
         respond_unauthorized(conn, "invalid_credentials")
 
       {:error, :invalid_credentials} ->
-        audit_auth_failure(conn, "invalid_credentials", nil)
+        audit_auth_failure(conn, "invalid_credentials")
         respond_unauthorized(conn, "invalid_credentials")
 
       {:error, :agent_suspended} ->
-        audit_auth_failure(conn, "agent_suspended", nil)
+        audit_auth_failure(conn, "agent_suspended")
         respond_forbidden(conn, "agent_suspended")
 
       {:error, :agent_revoked} ->
-        audit_auth_failure(conn, "agent_revoked", nil)
+        audit_auth_failure(conn, "agent_revoked")
         respond_forbidden(conn, "agent_revoked")
 
       {:error, :workspace_archived} ->
-        audit_auth_failure(conn, "workspace_archived", nil)
+        audit_auth_failure(conn, "workspace_archived")
         respond_forbidden(conn, "workspace_archived")
 
       {:error, :workspace_suspended} ->
-        audit_auth_failure(conn, "workspace_suspended", nil)
+        audit_auth_failure(conn, "workspace_suspended")
         respond_forbidden(conn, "workspace_suspended")
     end
   end
@@ -188,7 +188,7 @@ defmodule SwarmshieldWeb.Plugs.ApiAuth do
   # Audit logging for failed auth attempts
   # ---------------------------------------------------------------------------
 
-  defp audit_auth_failure(conn, reason, _token_prefix) do
+  defp audit_auth_failure(conn, reason) do
     ip_address = format_ip(conn.remote_ip)
 
     attrs = %{

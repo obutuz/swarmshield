@@ -21,7 +21,7 @@ defmodule Swarmshield.Deliberation.Consensus do
           {:consensus, :allow | :flag | :block, map()}
           | {:no_consensus, map()}
 
-  @spec evaluate([vote()], %ConsensusPolicy{}) :: consensus_result()
+  @spec evaluate([vote()], ConsensusPolicy.t()) :: consensus_result()
   def evaluate(votes, %ConsensusPolicy{strategy: :majority} = policy) do
     votes
     |> cast_votes()

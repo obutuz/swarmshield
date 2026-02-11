@@ -88,5 +88,9 @@ config :phoenix_live_view,
   # Enable helpful, but potentially expensive runtime checks
   enable_expensive_runtime_checks: true
 
+# CORS: Allow localhost origins in dev
+config :swarmshield, SwarmshieldWeb.Plugs.CorsHeaders,
+  allowed_origins: ["http://localhost:4000", "http://127.0.0.1:4000"]
+
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false

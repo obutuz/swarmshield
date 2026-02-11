@@ -209,6 +209,95 @@ SwarmShield is an AI Agent Firewall - "Cloudflare for AI Agents". It monitors, e
 - **Deliberation** - Multi-agent Opus 4.6 analysis of flagged events
 - **Workflows** - Ordered analysis pipelines with multiple agent steps
 - **Consensus** - Majority/supermajority/weighted voting on verdicts
+- **GhostProtocol** - Ephemeral agent lifecycle with perfect amnesia after task completion
+
+## GhostProtocol Architecture (Flagship Security Feature)
+
+GhostProtocol enables agents that do expert work then vanish completely - "digital ghosts." This is a full feature with its own database schema, configuration CRUD, dedicated LiveViews, and wipe engine.
+
+**The pitch:** "We let agents live for 30 seconds, do expert work, then vanish—like digital ghosts."
+
+### Database Schema: `ghost_protocol_configs` table
+Created by SCHEMA-015 migration. All settings database-driven, managed from admin UI.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | binary_id | Primary key |
+| workspace_id | binary_id | FK to workspaces |
+| name | string | Display name |
+| slug | string | URL-friendly identifier |
+| wipe_strategy | Ecto.Enum | :immediate, :delayed, :scheduled |
+| wipe_delay_seconds | integer | For delayed strategy (e.g., 300s grace period) |
+| wipe_fields | {:array, :string} | Fields to null: ["input_content", "deliberation_messages", "metadata"] |
+| retain_verdict | boolean | Always true - verdicts survive the wipe |
+| retain_audit | boolean | Always true - audit log survives |
+| max_session_duration_seconds | integer | Force-kill timer |
+| auto_terminate_on_expiry | boolean | Auto-terminate when max_session_duration exceeded |
+| crypto_shred | boolean | Overwrite with random bytes before nulling |
+| enabled | boolean | Config active flag |
+| metadata | map | Additional config data |
+
+### Workflow Integration
+- `workflows.ghost_protocol_config_id` references `ghost_protocol_configs(id)` (nullable FK)
+- NULL ghost_protocol_config_id = non-ephemeral (standard) workflow
+- Non-NULL = ephemeral workflow, wipe engine executes post-verdict
+
+### Schema Extensions (added by SCHEMA-015)
+- `analysis_sessions.input_content_hash` - SHA-256 hash kept for audit linking (survives wipe)
+- `analysis_sessions.expires_at` - Derived from config's max_session_duration
+- `agent_instances.terminated_at` - Records when GhostProtocol killed the agent
+
+### Runtime Mechanics
+1. Opus 4.6's 1M context window replaces persistent storage during analysis
+2. Session GenServer with `restart: :temporary` - BEAM GC cleans process memory on termination
+3. Post-verdict, wipe engine reads ghost_protocol_config from workflow's linked config
+4. Wipe engine nulls specified fields, optionally crypto-shreds first
+5. All agent GenServer instances terminated via DynamicSupervisor
+6. `terminated_at` recorded on all agent_instances
+7. Audit entry created for every wipe action
+8. PubSub broadcasts lifecycle events for LiveView visualization
+
+### Wipe Engine Flow (DELIB-013)
+```
+Verdict reached
+  -> Read ghost_protocol_config from workflow
+  -> If config is nil: skip (non-ephemeral)
+  -> If crypto_shred: overwrite fields with :crypto.strong_rand_bytes
+  -> NULL specified wipe_fields on analysis_session and deliberation_messages
+  -> Keep input_content_hash (SHA-256) for audit
+  -> Terminate all agent GenServer instances
+  -> Record terminated_at on agent_instances
+  -> Create audit_entries for wipe actions
+  -> PubSub broadcast "ghost_protocol:{session_id}" lifecycle events
+  -> If wipe_strategy = :delayed: Process.send_after for delayed execution
+```
+
+### Expiry Enforcement (DELIB-014)
+- Session GenServer checks `expires_at` via Process.send_after
+- If session exceeds `max_session_duration_seconds`: force-terminate
+- Partial verdict recorded if any agents completed
+- `auto_terminate_on_expiry` flag respected
+
+### GhostProtocol Permissions (database-driven)
+- `ghost_protocol:view` - View GhostProtocol dashboard and configs
+- `ghost_protocol:create` - Create new retention configs
+- `ghost_protocol:update` - Modify existing configs
+- `ghost_protocol:delete` - Delete configs, emergency force-wipe
+
+### GhostProtocol PubSub Topics
+- `"ghost_protocol:{workspace_id}"` - Workspace-level lifecycle events
+- `"ghost_protocol:{session_id}"` - Session-specific lifecycle events
+- Events: agent_spawned, agent_analyzing, agent_deliberating, wipe_started, wipe_completed, agent_terminated, session_expired
+
+### Key Files
+- Schema: `lib/swarmshield/ghost_protocol/ghost_protocol_config.ex`
+- Context: `lib/swarmshield/ghost_protocol.ex` (DELIB-004)
+- Wipe Engine: `lib/swarmshield/ghost_protocol/wipe_engine.ex` (DELIB-013)
+- Admin CRUD: `lib/swarmshield_web/live/admin/ghost_protocol_configs_live.ex` (ADMIN-008)
+- Admin Detail: `lib/swarmshield_web/live/admin/ghost_protocol_config_show_live.ex` (ADMIN-009)
+- Dashboard: `lib/swarmshield_web/live/ghost_protocol_live.ex` (DASH-009)
+- Session Detail: `lib/swarmshield_web/live/ghost_protocol_session_live.ex` (DASH-010)
+- Visual Effects: `assets/css/ghost_protocol.css`, `assets/js/hooks/ghost_protocol_hooks.js` (DEMO-003)
 
 **ETS Cache Architecture (20M+ users - no Nebulex, raw ETS + PubSub):**
 | Cache | GenServer | ETS Table | What | Invalidation |

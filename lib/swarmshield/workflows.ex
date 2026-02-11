@@ -1,4 +1,12 @@
 defmodule Swarmshield.Workflows do
+  @moduledoc """
+  Context for managing deliberation workflows, workflow steps, and consensus policies.
+
+  Workflows define how flagged events are processed through multi-agent deliberation.
+  Each workflow contains ordered steps (agent definitions) and links to a consensus
+  policy for vote evaluation. All operations are workspace-scoped.
+  """
+
   import Ecto.Query, warn: false
 
   alias Ecto.Multi
@@ -40,26 +48,6 @@ defmodule Swarmshield.Workflows do
     Workflow
     |> Repo.get!(id)
     |> Repo.preload(workflow_steps: :agent_definition, ghost_protocol_config: [])
-  end
-
-  @doc """
-  Finds the first enabled workflow matching a trigger condition for a workspace.
-
-  Matches workflows where `trigger_on` equals the given trigger or `:all`.
-  Returns the first match ordered by `inserted_at ASC` (oldest = highest priority),
-  or `nil` if no matching workflow exists.
-  """
-  def find_matching_workflow(workspace_id, trigger)
-      when is_binary(workspace_id) and is_atom(trigger) do
-    from(w in Workflow,
-      where:
-        w.workspace_id == ^workspace_id and
-          w.enabled == true and
-          w.trigger_on in ^[trigger, :all],
-      order_by: [asc: w.inserted_at],
-      limit: 1
-    )
-    |> Repo.one()
   end
 
   def create_workflow(workspace_id, attrs)
@@ -227,19 +215,7 @@ defmodule Swarmshield.Workflows do
             ),
             []
           )
-          |> then(fn multi ->
-            Enum.reduce(position_map, multi, fn {step_id, position}, acc ->
-              Multi.update_all(
-                acc,
-                {:set_position, step_id},
-                from(s in WorkflowStep,
-                  where: s.id == ^step_id and s.workflow_id == ^workflow_id,
-                  update: [set: [position: ^position]]
-                ),
-                []
-              )
-            end)
-          end)
+          |> build_position_updates(position_map, workflow_id)
 
         case Repo.transaction(multi) do
           {:ok, _results} ->
@@ -360,6 +336,20 @@ defmodule Swarmshield.Workflows do
       catch
         _kind, _reason -> :ok
       end
+    end)
+  end
+
+  defp build_position_updates(multi, position_map, workflow_id) do
+    Enum.reduce(position_map, multi, fn {step_id, position}, acc ->
+      Multi.update_all(
+        acc,
+        {:set_position, step_id},
+        from(s in WorkflowStep,
+          where: s.id == ^step_id and s.workflow_id == ^workflow_id,
+          update: [set: [position: ^position]]
+        ),
+        []
+      )
     end)
   end
 

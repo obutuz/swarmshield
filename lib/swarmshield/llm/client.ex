@@ -123,38 +123,42 @@ defmodule Swarmshield.LLM.Client do
       |> maybe_add_system_prompt(opts)
       |> maybe_add_api_key(opts)
 
-    try do
-      case backend.(model_spec, messages, call_opts) do
-        {:ok, %ReqLLM.Response{} = response} ->
-          handle_response(response, model_spec, workspace_id, opts)
+    backend.(model_spec, messages, call_opts)
+    |> classify_backend_result(model_spec, workspace_id, opts)
+  rescue
+    e in [Req.TransportError] ->
+      classify_transport_error(e)
 
-        {:ok, response} when is_map(response) ->
-          handle_map_response(response, model_spec, workspace_id, opts)
-
-        {:error, %{status: status}} when status in @retryable_statuses ->
-          {:error, {:retryable, status}}
-
-        {:error, %{status: status}} ->
-          {:error, {:api_error, status}}
-
-        {:error, %Jason.DecodeError{}} ->
-          {:error, :invalid_response}
-
-        {:error, reason} ->
-          classify_error(reason)
-      end
-    rescue
-      e in [Req.TransportError] ->
-        case e do
-          %{reason: :timeout} -> {:error, :timeout}
-          _ -> {:error, {:transport_error, Exception.message(e)}}
-        end
-
-      e ->
-        Logger.error("[LLM.Client] Unexpected error: #{Exception.message(e)}")
-        {:error, {:unexpected, Exception.message(e)}}
-    end
+    e ->
+      Logger.error("[LLM.Client] Unexpected error: #{Exception.message(e)}")
+      {:error, {:unexpected, Exception.message(e)}}
   end
+
+  defp classify_backend_result({:ok, %ReqLLM.Response{} = response}, model_spec, ws_id, opts) do
+    handle_response(response, model_spec, ws_id, opts)
+  end
+
+  defp classify_backend_result({:ok, response}, model_spec, ws_id, opts) when is_map(response) do
+    handle_map_response(response, model_spec, ws_id, opts)
+  end
+
+  defp classify_backend_result({:error, %{status: status}}, _, _, _)
+       when status in @retryable_statuses do
+    {:error, {:retryable, status}}
+  end
+
+  defp classify_backend_result({:error, %{status: status}}, _, _, _),
+    do: {:error, {:api_error, status}}
+
+  defp classify_backend_result({:error, %Jason.DecodeError{}}, _, _, _),
+    do: {:error, :invalid_response}
+
+  defp classify_backend_result({:error, reason}, _, _, _), do: classify_error(reason)
+
+  defp classify_transport_error(%{reason: :timeout}), do: {:error, :timeout}
+
+  defp classify_transport_error(e),
+    do: {:error, {:transport_error, Exception.message(e)}}
 
   defp handle_response(response, model_spec, _workspace_id, _opts) do
     case ReqLLM.Response.ok?(response) do

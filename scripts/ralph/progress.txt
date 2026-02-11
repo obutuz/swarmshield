@@ -59,3 +59,9 @@ GW-001 DONE 2026-02-11 Create ApiAuth plug (Bearer token auth, ETS cache lookup,
 GW-002 DONE 2026-02-11 Create API pipeline in router.ex (RequireJson, CorsHeaders, ApiSecurityHeaders, ApiRateLimit, HealthController) - 1019 tests pass, credo clean
 GW-003 DONE 2026-02-11 Create EventController (POST /api/v1/events with explicit param extraction, source_ip from conn, audit trail) - 1037 tests pass, credo clean
 GW-004 DONE 2026-02-11 Create EventJSON view module (index/show, no workspace_id exposure, ISO 8601 datetimes) - 1037 tests pass, credo clean
+GW-005 DONE 2026-02-11 Wire PolicyEngine into EventController (evaluate->update status->create violations, try/catch resilience, sanitized eval result) - 1227 tests pass, credo clean
+GW-006 DONE 2026-02-11 PubSub broadcast on event ingestion (events:ws_id + violations:ws_id, preloaded assocs, rescue on failure) - 1235 tests pass, credo clean
+GW-007 DONE 2026-02-11 Auto-trigger deliberation on flagged events (Task.Supervisor async, find_matching_workflow DB query, audit trail) - 1274 tests pass, credo clean
+GW-008 DONE 2026-02-11 Create HealthController (DB connectivity check with 5s timeout, Application.spec version, ISO 8601 timestamp, no info leakage) - 1274 tests pass, credo clean
+AUDIT-005 DONE 2026-02-11 Phase 4 security audit: CORS wildcard default fixed (empty by default), changeset_json rescue on atom conversion, CORS test coverage for edge cases - 1307 tests pass, credo clean
+AUDIT-006 DONE 2026-02-11 Phase 4 deep edge case audit: removed duplicate find_matching_workflow (use get_enabled_workflow_for_trigger), fixed N+1 in broadcast_violations_created (batch preload), added Vary:Origin CORS header, cleaned dead audit_auth_failure param - 1318 tests pass, credo clean
