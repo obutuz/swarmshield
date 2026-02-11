@@ -85,3 +85,4 @@ DASH-003 DONE 2026-02-11 EventsLive (streams, composable filters, content search
 DASH-004 DONE 2026-02-11 EventShowLive (event detail, evaluation results, matched rules, linked violations, linked deliberation+verdict, GhostProtocol ephemeral badge, workspace-scoped 404) - 1349 tests pass, credo clean
 DASH-005 DONE 2026-02-11 AgentsLive (streams, composable filters: status/agent_type/search, risk level badges, relative time, pagination, empty state, GOD MODE UI) - 1361 tests pass, credo clean
 DASH-006 DONE 2026-02-11 AgentShowLive (agent detail, stats via conditional aggregates, events+violations tabs with streams, PubSub real-time, workspace-scoped 404, metadata display) - 1374 tests pass, credo clean
+DASH-007 DONE 2026-02-11 DeliberationsLive (streams, status/trigger filters, verdict+confidence display, GhostProtocol ephemeral badge, workflow preload, PubSub, GOD MODE UI) - 1384 tests pass, credo clean

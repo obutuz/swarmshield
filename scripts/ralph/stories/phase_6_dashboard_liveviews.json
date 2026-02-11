@@ -216,7 +216,7 @@
       "title": "Create DeliberationsLive (session list with GhostProtocol status)",
       "description": "Deliberation session list showing all analysis sessions with status, workflow used, verdict outcome, and GhostProtocol ephemeral indicator.",
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "DASH-001"
       ],

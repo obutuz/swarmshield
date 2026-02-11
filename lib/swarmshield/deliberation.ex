@@ -38,7 +38,7 @@ defmodule Swarmshield.Deliberation do
     base_query =
       from(s in AnalysisSession,
         where: s.workspace_id == ^workspace_id,
-        preload: [:verdict]
+        preload: [:verdict, workflow: :ghost_protocol_config]
       )
       |> apply_session_filters(opts)
 
