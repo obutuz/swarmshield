@@ -19,6 +19,10 @@ defmodule Swarmshield.Policies.PolicyEngine do
   require Logger
 
   alias Swarmshield.Policies.PolicyCache
+  alias Swarmshield.Policies.Rules.ListMatch
+  alias Swarmshield.Policies.Rules.PatternMatch
+  alias Swarmshield.Policies.Rules.PayloadSize
+  alias Swarmshield.Policies.Rules.RateLimit
 
   @doc """
   Evaluates an agent event against cached policy rules for a workspace.
@@ -167,14 +171,29 @@ defmodule Swarmshield.Policies.PolicyEngine do
   end
 
   # Dispatch to rule evaluator based on rule_type via pattern matching.
-  # Individual rule evaluators (POLICY-005 through POLICY-008) will be
-  # wired in via POLICY-009, replacing the :no_violation stubs below.
+  # Each evaluator returns {:ok, _} or {:violation, details}.
+  # We normalize to :no_violation or {:violation, details}.
   @spec do_evaluate_rule(map(), map(), binary()) :: :no_violation | {:violation, map()}
-  defp do_evaluate_rule(%{rule_type: :rate_limit}, _event, _workspace_id), do: :no_violation
-  defp do_evaluate_rule(%{rule_type: :pattern_match}, _event, _workspace_id), do: :no_violation
-  defp do_evaluate_rule(%{rule_type: :blocklist}, _event, _workspace_id), do: :no_violation
-  defp do_evaluate_rule(%{rule_type: :allowlist}, _event, _workspace_id), do: :no_violation
-  defp do_evaluate_rule(%{rule_type: :payload_size}, _event, _workspace_id), do: :no_violation
+  defp do_evaluate_rule(%{rule_type: :rate_limit} = rule, event, _workspace_id) do
+    normalize_result(RateLimit.evaluate(event, rule))
+  end
+
+  defp do_evaluate_rule(%{rule_type: :pattern_match} = rule, event, _workspace_id) do
+    normalize_result(PatternMatch.evaluate(event, rule))
+  end
+
+  defp do_evaluate_rule(%{rule_type: :blocklist} = rule, event, _workspace_id) do
+    normalize_result(ListMatch.evaluate(event, rule))
+  end
+
+  defp do_evaluate_rule(%{rule_type: :allowlist} = rule, event, _workspace_id) do
+    normalize_result(ListMatch.evaluate(event, rule))
+  end
+
+  defp do_evaluate_rule(%{rule_type: :payload_size} = rule, event, _workspace_id) do
+    normalize_result(PayloadSize.evaluate(event, rule))
+  end
+
   defp do_evaluate_rule(%{rule_type: :custom}, _event, _workspace_id), do: :no_violation
 
   defp do_evaluate_rule(%{rule_type: unknown_type} = rule, _event, _workspace_id) do
@@ -184,6 +203,9 @@ defmodule Swarmshield.Policies.PolicyEngine do
 
     :no_violation
   end
+
+  defp normalize_result({:ok, _}), do: :no_violation
+  defp normalize_result({:violation, details}), do: {:violation, details}
 
   # ---------------------------------------------------------------------------
   # Telemetry

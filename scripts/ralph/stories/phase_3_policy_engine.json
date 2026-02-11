@@ -303,7 +303,7 @@
       "title": "Composite rule evaluation in PolicyEngine",
       "description": "Wire all individual rule evaluators into the PolicyEngine. The engine dispatches to the correct evaluator based on rule_type and combines results.",
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "POLICY-005",
         "POLICY-006",
