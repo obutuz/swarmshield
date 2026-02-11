@@ -69,6 +69,31 @@ defmodule Swarmshield.Deliberation do
   end
 
   @doc """
+  Gets a full analysis session for the detail view, scoped to workspace.
+
+  Returns nil if not found. Preloads all associations needed for the
+  deliberation show view: agent instances with definitions and messages,
+  verdict, workflow with ghost_protocol_config.
+  """
+  def get_full_session_for_workspace(id, workspace_id)
+      when is_binary(id) and is_binary(workspace_id) do
+    AnalysisSession
+    |> where([s], s.id == ^id and s.workspace_id == ^workspace_id)
+    |> Repo.one()
+    |> case do
+      nil ->
+        nil
+
+      session ->
+        Repo.preload(session,
+          verdict: [],
+          workflow: :ghost_protocol_config,
+          agent_instances: [:agent_definition, :deliberation_messages]
+        )
+    end
+  end
+
+  @doc """
   Gets the analysis session linked to an agent event, if any.
   Returns nil if no session is linked. Preloads verdict and workflow.
   """
@@ -180,6 +205,21 @@ defmodule Swarmshield.Deliberation do
 
       error ->
         error
+    end
+  end
+
+  @doc """
+  Gets a single deliberation message by ID.
+
+  Returns nil if not found. Preloads agent_instance with agent_definition
+  for use in real-time PubSub updates where agent_name is needed.
+  """
+  def get_deliberation_message(id) when is_binary(id) do
+    DeliberationMessage
+    |> Repo.get(id)
+    |> case do
+      nil -> nil
+      message -> Repo.preload(message, agent_instance: :agent_definition)
     end
   end
 

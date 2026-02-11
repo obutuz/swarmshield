@@ -248,7 +248,7 @@
       "title": "Create DeliberationShowLive (real-time debate viewer)",
       "description": "Real-time deliberation viewer showing live debate between AI agents. For ephemeral sessions, shows GhostProtocol lifecycle with wipe visualization.",
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "DASH-007"
       ],
