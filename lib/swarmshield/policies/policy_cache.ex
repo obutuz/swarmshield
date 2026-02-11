@@ -20,6 +20,8 @@ defmodule Swarmshield.Policies.PolicyCache do
 
   use GenServer
 
+  alias Swarmshield.Policies.Rules.RateLimit
+
   require Logger
 
   @policy_rules_table :policy_rules_cache
@@ -119,6 +121,9 @@ defmodule Swarmshield.Policies.PolicyCache do
         :named_table,
         read_concurrency: true
       ])
+
+      # Initialize rate limit counters table (used by RateLimit rule evaluator)
+      RateLimit.init_table()
 
       load_all_rules()
 

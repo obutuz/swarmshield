@@ -46,3 +46,7 @@ AUDIT-002 DONE 2026-02-11 Fix ReDoS detection (100ms timeout + non-matching inpu
 AUDIT-003 DONE 2026-02-11 Add edge case tests (ReDoS, template security, null bytes, FK cascades) - 843 tests pass, credo clean
 POLICY-003 DONE 2026-02-11 Create PolicyCache GenServer with ETS - 843 tests pass, credo clean
 POLICY-004 DONE 2026-02-11 Create PolicyEngine pure-function module - 853 tests pass, credo clean
+POLICY-005 DONE 2026-02-11 Rate limit rule evaluation (ETS sliding window counters) - 890 tests pass, credo clean
+POLICY-006 DONE 2026-02-11 Pattern match rule evaluation (regex + keyword detection) - 890 tests pass, credo clean
+POLICY-007 DONE 2026-02-11 Blocklist/allowlist rule evaluation - 890 tests pass, credo clean
+POLICY-008 DONE 2026-02-11 Payload size rule evaluation - 890 tests pass, credo clean

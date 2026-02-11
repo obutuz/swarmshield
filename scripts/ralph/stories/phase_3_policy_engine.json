@@ -169,7 +169,7 @@
       "title": "Rate limit rule evaluation",
       "description": "Implements rate limiting evaluation using ETS-based sliding window counters. Tracks event counts per agent within configurable time windows.",
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "POLICY-004"
       ],
@@ -205,7 +205,7 @@
       "title": "Pattern match rule evaluation",
       "description": "Implements pattern matching evaluation using cached detection rules. Checks event content against regex patterns and keyword lists.",
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "POLICY-004"
       ],
@@ -239,7 +239,7 @@
       "title": "Blocklist/allowlist rule evaluation",
       "description": "Implements blocklist and allowlist evaluation. Checks agent names, IPs, or content against configured lists.",
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "POLICY-004"
       ],
@@ -271,7 +271,7 @@
       "title": "Payload size rule evaluation",
       "description": "Implements payload size checking. Validates that event content and payload don't exceed configured size limits.",
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "POLICY-004"
       ],
