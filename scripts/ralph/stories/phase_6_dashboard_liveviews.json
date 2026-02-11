@@ -364,7 +364,7 @@
       "title": "Create AuditLive (paginated audit log)",
       "description": "Paginated audit log showing all system actions including GhostProtocol wipe events. Filterable and searchable.",
       "priority": 11,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "DASH-001"
       ],

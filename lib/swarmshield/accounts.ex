@@ -823,6 +823,32 @@ defmodule Swarmshield.Accounts do
     {entries, total_count}
   end
 
+  @doc """
+  Returns distinct action names for a workspace, used for filter dropdowns.
+  """
+  def list_audit_actions(workspace_id) when is_binary(workspace_id) do
+    from(a in AuditEntry,
+      where: a.workspace_id == ^workspace_id,
+      distinct: true,
+      select: a.action,
+      order_by: [asc: a.action]
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Returns distinct resource types for a workspace, used for filter dropdowns.
+  """
+  def list_audit_resource_types(workspace_id) when is_binary(workspace_id) do
+    from(a in AuditEntry,
+      where: a.workspace_id == ^workspace_id,
+      distinct: true,
+      select: a.resource_type,
+      order_by: [asc: a.resource_type]
+    )
+    |> Repo.all()
+  end
+
   defp apply_audit_filters(query, opts) do
     query
     |> maybe_filter_action(Keyword.get(opts, :action))
@@ -830,6 +856,7 @@ defmodule Swarmshield.Accounts do
     |> maybe_filter_resource_type(Keyword.get(opts, :resource_type))
     |> maybe_filter_from(Keyword.get(opts, :from))
     |> maybe_filter_to(Keyword.get(opts, :to))
+    |> maybe_filter_search(Keyword.get(opts, :search))
   end
 
   defp maybe_filter_action(query, nil), do: query
@@ -848,4 +875,25 @@ defmodule Swarmshield.Accounts do
 
   defp maybe_filter_to(query, nil), do: query
   defp maybe_filter_to(query, to), do: where(query, [a], a.inserted_at <= ^to)
+
+  defp maybe_filter_search(query, nil), do: query
+  defp maybe_filter_search(query, ""), do: query
+
+  defp maybe_filter_search(query, term) when is_binary(term) do
+    sanitized = "%#{sanitize_like(term)}%"
+
+    where(
+      query,
+      [a],
+      ilike(a.actor_email, ^sanitized) or
+        ilike(type(a.resource_id, :string), ^sanitized)
+    )
+  end
+
+  defp sanitize_like(term) do
+    term
+    |> String.replace("\\", "\\\\")
+    |> String.replace("%", "\\%")
+    |> String.replace("_", "\\_")
+  end
 end
