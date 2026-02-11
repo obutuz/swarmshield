@@ -41,6 +41,15 @@ defmodule Swarmshield.GhostProtocol do
     {configs, total_count}
   end
 
+  def list_enabled_configs_for_select(workspace_id) when is_binary(workspace_id) do
+    from(c in Config,
+      where: c.workspace_id == ^workspace_id and c.enabled == true,
+      order_by: [asc: c.name],
+      select: {c.id, c.name}
+    )
+    |> Repo.all()
+  end
+
   def get_config!(id) when is_binary(id) do
     Config
     |> Repo.get!(id)

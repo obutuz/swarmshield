@@ -50,6 +50,23 @@ defmodule Swarmshield.Workflows do
     |> Repo.preload(workflow_steps: :agent_definition, ghost_protocol_config: [])
   end
 
+  def get_workflow_for_workspace!(id, workspace_id)
+      when is_binary(id) and is_binary(workspace_id) do
+    step_query =
+      from(s in WorkflowStep,
+        order_by: [asc: s.position]
+      )
+
+    from(w in Workflow,
+      where: w.id == ^id and w.workspace_id == ^workspace_id
+    )
+    |> Repo.one!()
+    |> Repo.preload(
+      workflow_steps: {step_query, [:agent_definition, :prompt_template]},
+      ghost_protocol_config: []
+    )
+  end
+
   def create_workflow(workspace_id, attrs)
       when is_binary(workspace_id) and is_map(attrs) do
     result =
@@ -112,6 +129,16 @@ defmodule Swarmshield.Workflows do
     |> Repo.one()
   end
 
+  @doc "Returns a changeset for tracking workflow form changes."
+  def change_workflow(%Workflow{} = workflow, attrs \\ %{}) do
+    Workflow.changeset(workflow, attrs)
+  end
+
+  @doc "Preloads workflow associations for display (workflow_steps, ghost_protocol_config)."
+  def preload_workflow_assocs(%Workflow{} = workflow) do
+    Repo.preload(workflow, [:workflow_steps, :ghost_protocol_config])
+  end
+
   # ---------------------------------------------------------------------------
   # WorkflowStep
   # ---------------------------------------------------------------------------
@@ -119,10 +146,16 @@ defmodule Swarmshield.Workflows do
   def list_workflow_steps(workflow_id) when is_binary(workflow_id) do
     from(s in WorkflowStep,
       where: s.workflow_id == ^workflow_id,
-      preload: [:agent_definition],
+      preload: [:agent_definition, :prompt_template],
       order_by: [asc: s.position]
     )
     |> Repo.all()
+  end
+
+  def get_workflow_step!(id) when is_binary(id) do
+    WorkflowStep
+    |> Repo.get!(id)
+    |> Repo.preload([:agent_definition, :prompt_template])
   end
 
   def create_workflow_step(attrs) when is_map(attrs) do
@@ -133,7 +166,7 @@ defmodule Swarmshield.Workflows do
 
     case result do
       {:ok, step} ->
-        step = Repo.preload(step, :agent_definition)
+        step = Repo.preload(step, [:agent_definition, :prompt_template])
         workflow = Repo.get!(Workflow, step.workflow_id)
         audit_async("workflow_step.created", "workflow_step", step.id, workflow.workspace_id)
         {:ok, step}
@@ -181,6 +214,23 @@ defmodule Swarmshield.Workflows do
       error ->
         error
     end
+  end
+
+  @doc "Returns a changeset for tracking workflow step form changes."
+  def change_workflow_step(%WorkflowStep{} = step, attrs \\ %{}) do
+    WorkflowStep.changeset(step, attrs)
+  end
+
+  @doc "Returns the next available position for a workflow step (max + 1)."
+  def next_step_position(workflow_id) when is_binary(workflow_id) do
+    max_pos =
+      from(s in WorkflowStep,
+        where: s.workflow_id == ^workflow_id,
+        select: max(s.position)
+      )
+      |> Repo.one()
+
+    (max_pos || 0) + 1
   end
 
   def reorder_workflow_steps(workflow_id, ordered_ids)

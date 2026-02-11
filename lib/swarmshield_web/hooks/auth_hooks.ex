@@ -155,6 +155,12 @@ defmodule SwarmshieldWeb.Hooks.AuthHooks do
     check_permission(assigns, permission_key)
   end
 
+  # Template-friendly clause: when called from HEEx with `assigns` directly
+  # (assigns map has :user_permissions but no :assigns key)
+  def has_socket_permission?(%{user_permissions: _} = assigns, permission_key) do
+    check_permission(assigns, permission_key)
+  end
+
   # --- Private helpers ---
 
   defp mount_current_scope(socket, session) do

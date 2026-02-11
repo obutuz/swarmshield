@@ -104,6 +104,23 @@ defmodule Swarmshield.Agents do
     |> Repo.all()
   end
 
+  @doc "Returns {id, name} tuples of enabled agent definitions for select dropdowns."
+  def list_enabled_agent_definitions_for_select(workspace_id) when is_binary(workspace_id) do
+    from(ad in AgentDefinition,
+      where: ad.workspace_id == ^workspace_id and ad.enabled == true,
+      order_by: [asc: ad.name],
+      select: {ad.id, ad.name}
+    )
+    |> Repo.all()
+  end
+
+  @doc "Checks if an agent definition belongs to the given workspace."
+  def workspace_agent_definition?(id, workspace_id)
+      when is_binary(id) and is_binary(workspace_id) do
+    from(ad in AgentDefinition, where: ad.id == ^id and ad.workspace_id == ^workspace_id)
+    |> Repo.exists?()
+  end
+
   # ---------------------------------------------------------------------------
   # PromptTemplate
   # ---------------------------------------------------------------------------
@@ -164,6 +181,23 @@ defmodule Swarmshield.Agents do
       error ->
         error
     end
+  end
+
+  @doc "Returns {id, name} tuples of enabled prompt templates for select dropdowns."
+  def list_enabled_prompt_templates_for_select(workspace_id) when is_binary(workspace_id) do
+    from(pt in PromptTemplate,
+      where: pt.workspace_id == ^workspace_id and pt.enabled == true,
+      order_by: [asc: pt.name],
+      select: {pt.id, pt.name}
+    )
+    |> Repo.all()
+  end
+
+  @doc "Checks if a prompt template belongs to the given workspace."
+  def workspace_prompt_template?(id, workspace_id)
+      when is_binary(id) and is_binary(workspace_id) do
+    from(pt in PromptTemplate, where: pt.id == ^id and pt.workspace_id == ^workspace_id)
+    |> Repo.exists?()
   end
 
   def delete_prompt_template(%PromptTemplate{} = template) do

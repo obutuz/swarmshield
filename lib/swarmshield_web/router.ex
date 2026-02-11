@@ -119,6 +119,10 @@ defmodule SwarmshieldWeb.Router do
       live "/settings", SettingsLive, :index
       live "/roles", RolesLive, :index
       live "/users", UsersLive, :index
+      live "/workflows", WorkflowsLive, :index
+      live "/workflows/new", WorkflowsLive, :new
+      live "/workflows/:id", WorkflowShowLive, :show
+      live "/workflows/:id/edit", WorkflowsLive, :edit
     end
   end
 

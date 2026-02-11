@@ -26,7 +26,7 @@
       "title": "Create WorkflowsLive CRUD",
       "description": "Admin view for managing deliberation workflows. List all workflows with CRUD operations, status toggle, and link to step editor. Workflows may optionally link to a GhostProtocol config for ephemeral behavior.",
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "dependsOn": [],
       "acceptanceCriteria": [
         "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
@@ -67,7 +67,7 @@
       "title": "Create WorkflowShowLive step editor with GhostProtocol config link",
       "description": "Visual workflow step editor. Add, remove, reorder steps in a workflow. Each step configures an agent definition and optional prompt template. Shows linked GhostProtocol config details if present.",
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "ADMIN-001"
       ],
