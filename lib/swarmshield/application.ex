@@ -16,6 +16,7 @@ defmodule Swarmshield.Application do
       Swarmshield.Authorization.AuthCache,
       Swarmshield.Policies.PolicyCache,
       Swarmshield.Gateway.ApiKeyCache,
+      SwarmshieldWeb.Plugs.ApiRateLimit.Store,
       # Start to serve requests, typically the last entry
       SwarmshieldWeb.Endpoint
     ]

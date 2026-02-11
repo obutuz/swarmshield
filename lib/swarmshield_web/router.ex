@@ -15,6 +15,14 @@ defmodule SwarmshieldWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+    plug SwarmshieldWeb.Plugs.CorsHeaders
+    plug SwarmshieldWeb.Plugs.ApiSecurityHeaders
+    plug SwarmshieldWeb.Plugs.RequireJson
+    plug SwarmshieldWeb.Plugs.ApiRateLimit
+  end
+
+  pipeline :api_auth do
+    plug SwarmshieldWeb.Plugs.ApiAuth
   end
 
   ## Public routes (no auth required)
@@ -112,9 +120,18 @@ defmodule SwarmshieldWeb.Router do
     end
   end
 
-  ## API routes (placeholder for GW-002)
+  ## API routes - unauthenticated (health check)
 
   scope "/api/v1", SwarmshieldWeb.Api.V1 do
     pipe_through :api
+
+    get "/health", HealthController, :index
+    match :options, "/*_path", HealthController, :index
+  end
+
+  ## API routes - authenticated (Bearer token)
+
+  scope "/api/v1", SwarmshieldWeb.Api.V1 do
+    pipe_through [:api, :api_auth]
   end
 end

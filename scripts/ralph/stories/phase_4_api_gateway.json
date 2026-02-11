@@ -62,7 +62,7 @@
       "title": "Create API pipeline in router.ex",
       "description": "Add API pipeline to Phoenix router with JSON content type, API authentication, and versioned routing scope.",
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "GW-001"
       ],

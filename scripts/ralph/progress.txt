@@ -56,3 +56,4 @@ POLICY-011 DONE 2026-02-11 Create ApiKeyCache GenServer with ETS - 912 tests pas
 SCHEMA-015 DONE 2026-02-11 Create GhostProtocolConfig schema and add FK to Workflow - 965 tests pass, credo clean
 AUDIT-004 DONE 2026-02-11 Add Phase 3 edge case tests (ReDoS timeout, window expiry, concurrent lookups, negative TTL, crash recovery) - 965 tests pass, credo clean
 GW-001 DONE 2026-02-11 Create ApiAuth plug (Bearer token auth, ETS cache lookup, async last_seen_at, audit trail, workspace validation) - 986 tests pass, credo clean
+GW-002 DONE 2026-02-11 Create API pipeline in router.ex (RequireJson, CorsHeaders, ApiSecurityHeaders, ApiRateLimit, HealthController) - 1019 tests pass, credo clean

@@ -7,6 +7,7 @@ defmodule SwarmshieldWeb.Plugs.ApiAuthTest do
   alias Swarmshield.Gateway.ApiKeyCache
   alias Swarmshield.Gateway.RegisteredAgent
   alias Swarmshield.Repo
+  alias SwarmshieldWeb.Plugs.ApiAuth
 
   import Swarmshield.AccountsFixtures
   import Swarmshield.GatewayFixtures
@@ -45,7 +46,7 @@ defmodule SwarmshieldWeb.Plugs.ApiAuthTest do
       conn =
         conn
         |> put_req_header("authorization", "Bearer #{raw_key}")
-        |> SwarmshieldWeb.Plugs.ApiAuth.call([])
+        |> ApiAuth.call([])
 
       refute conn.halted
       assert conn.assigns.current_agent.agent_id == agent.id
@@ -60,7 +61,7 @@ defmodule SwarmshieldWeb.Plugs.ApiAuthTest do
       conn =
         conn
         |> put_req_header("authorization", "bearer #{raw_key}")
-        |> SwarmshieldWeb.Plugs.ApiAuth.call([])
+        |> ApiAuth.call([])
 
       refute conn.halted
       assert conn.assigns[:current_agent]
@@ -72,7 +73,7 @@ defmodule SwarmshieldWeb.Plugs.ApiAuthTest do
       conn =
         conn
         |> put_req_header("authorization", "BEARER #{raw_key}")
-        |> SwarmshieldWeb.Plugs.ApiAuth.call([])
+        |> ApiAuth.call([])
 
       refute conn.halted
       assert conn.assigns[:current_agent]
@@ -84,7 +85,7 @@ defmodule SwarmshieldWeb.Plugs.ApiAuthTest do
       conn =
         conn
         |> put_req_header("authorization", "Bearer   #{raw_key}  ")
-        |> SwarmshieldWeb.Plugs.ApiAuth.call([])
+        |> ApiAuth.call([])
 
       refute conn.halted
       assert conn.assigns[:current_agent]
@@ -95,7 +96,7 @@ defmodule SwarmshieldWeb.Plugs.ApiAuthTest do
 
       conn
       |> put_req_header("authorization", "Bearer #{raw_key}")
-      |> SwarmshieldWeb.Plugs.ApiAuth.call([])
+      |> ApiAuth.call([])
 
       # Wait for async task to complete
       Process.sleep(100)
@@ -107,7 +108,7 @@ defmodule SwarmshieldWeb.Plugs.ApiAuthTest do
 
   describe "missing authorization header" do
     test "returns 401 when Authorization header is missing", %{conn: conn} do
-      conn = SwarmshieldWeb.Plugs.ApiAuth.call(conn, [])
+      conn = ApiAuth.call(conn, [])
 
       assert conn.halted
       assert conn.status == 401
@@ -123,7 +124,7 @@ defmodule SwarmshieldWeb.Plugs.ApiAuthTest do
       conn =
         conn
         |> put_req_header("authorization", "Basic some-token")
-        |> SwarmshieldWeb.Plugs.ApiAuth.call([])
+        |> ApiAuth.call([])
 
       assert conn.halted
       assert conn.status == 401
@@ -136,7 +137,7 @@ defmodule SwarmshieldWeb.Plugs.ApiAuthTest do
       conn =
         conn
         |> put_req_header("authorization", "")
-        |> SwarmshieldWeb.Plugs.ApiAuth.call([])
+        |> ApiAuth.call([])
 
       assert conn.halted
       assert conn.status == 401
@@ -146,7 +147,7 @@ defmodule SwarmshieldWeb.Plugs.ApiAuthTest do
       conn =
         conn
         |> put_req_header("authorization", "Bearer ")
-        |> SwarmshieldWeb.Plugs.ApiAuth.call([])
+        |> ApiAuth.call([])
 
       assert conn.halted
       assert conn.status == 401
@@ -156,7 +157,7 @@ defmodule SwarmshieldWeb.Plugs.ApiAuthTest do
       conn =
         conn
         |> put_req_header("authorization", "Bearer")
-        |> SwarmshieldWeb.Plugs.ApiAuth.call([])
+        |> ApiAuth.call([])
 
       assert conn.halted
       assert conn.status == 401
@@ -168,7 +169,7 @@ defmodule SwarmshieldWeb.Plugs.ApiAuthTest do
       conn =
         conn
         |> put_req_header("authorization", "Bearer totally-fake-token-12345")
-        |> SwarmshieldWeb.Plugs.ApiAuth.call([])
+        |> ApiAuth.call([])
 
       assert conn.halted
       assert conn.status == 401
@@ -183,12 +184,12 @@ defmodule SwarmshieldWeb.Plugs.ApiAuthTest do
       conn1 =
         build_conn()
         |> put_req_header("authorization", "Bearer completely-invalid-key")
-        |> SwarmshieldWeb.Plugs.ApiAuth.call([])
+        |> ApiAuth.call([])
 
       conn2 =
         build_conn()
         |> put_req_header("authorization", "Bearer another-invalid-key-here")
-        |> SwarmshieldWeb.Plugs.ApiAuth.call([])
+        |> ApiAuth.call([])
 
       body1 = Jason.decode!(conn1.resp_body)
       body2 = Jason.decode!(conn2.resp_body)
@@ -209,7 +210,7 @@ defmodule SwarmshieldWeb.Plugs.ApiAuthTest do
       conn =
         conn
         |> put_req_header("authorization", "Bearer #{raw_key}")
-        |> SwarmshieldWeb.Plugs.ApiAuth.call([])
+        |> ApiAuth.call([])
 
       assert conn.halted
       assert conn.status == 403
@@ -230,7 +231,7 @@ defmodule SwarmshieldWeb.Plugs.ApiAuthTest do
       conn =
         conn
         |> put_req_header("authorization", "Bearer #{raw_key}")
-        |> SwarmshieldWeb.Plugs.ApiAuth.call([])
+        |> ApiAuth.call([])
 
       assert conn.halted
       assert conn.status == 403
@@ -250,7 +251,7 @@ defmodule SwarmshieldWeb.Plugs.ApiAuthTest do
       conn =
         conn
         |> put_req_header("authorization", "Bearer #{raw_key}")
-        |> SwarmshieldWeb.Plugs.ApiAuth.call([])
+        |> ApiAuth.call([])
 
       assert conn.halted
       assert conn.status == 403
@@ -268,7 +269,7 @@ defmodule SwarmshieldWeb.Plugs.ApiAuthTest do
       conn =
         conn
         |> put_req_header("authorization", "Bearer #{raw_key}")
-        |> SwarmshieldWeb.Plugs.ApiAuth.call([])
+        |> ApiAuth.call([])
 
       assert conn.halted
       assert conn.status == 403
@@ -284,7 +285,7 @@ defmodule SwarmshieldWeb.Plugs.ApiAuthTest do
 
       conn
       |> put_req_header("authorization", "Bearer invalid-token-for-audit")
-      |> SwarmshieldWeb.Plugs.ApiAuth.call([])
+      |> ApiAuth.call([])
 
       # Wait for async audit task
       Process.sleep(100)
@@ -295,7 +296,7 @@ defmodule SwarmshieldWeb.Plugs.ApiAuthTest do
     test "audit entry includes IP address and reason", %{conn: conn} do
       conn
       |> put_req_header("authorization", "Bearer audit-test-token")
-      |> SwarmshieldWeb.Plugs.ApiAuth.call([])
+      |> ApiAuth.call([])
 
       # Wait for async audit task
       Process.sleep(100)
@@ -310,7 +311,7 @@ defmodule SwarmshieldWeb.Plugs.ApiAuthTest do
 
   describe "response format" do
     test "401 responses have application/json content type", %{conn: conn} do
-      conn = SwarmshieldWeb.Plugs.ApiAuth.call(conn, [])
+      conn = ApiAuth.call(conn, [])
 
       assert conn.status == 401
       [content_type] = get_resp_header(conn, "content-type")
@@ -326,7 +327,7 @@ defmodule SwarmshieldWeb.Plugs.ApiAuthTest do
       conn =
         conn
         |> put_req_header("authorization", "Bearer #{raw_key}")
-        |> SwarmshieldWeb.Plugs.ApiAuth.call([])
+        |> ApiAuth.call([])
 
       assert conn.status == 403
       [content_type] = get_resp_header(conn, "content-type")
@@ -336,7 +337,7 @@ defmodule SwarmshieldWeb.Plugs.ApiAuthTest do
 
   describe "init/1" do
     test "passes options through unchanged" do
-      assert SwarmshieldWeb.Plugs.ApiAuth.init(foo: :bar) == [foo: :bar]
+      assert ApiAuth.init(foo: :bar) == [foo: :bar]
     end
   end
 
