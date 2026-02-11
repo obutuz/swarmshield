@@ -177,6 +177,15 @@ defmodule SwarmshieldWeb.Hooks.AuthHooks do
   defp load_workspace_context(_user, nil), do: {:error, :no_workspace_in_session}
   defp load_workspace_context(_user, ""), do: {:error, :no_workspace_in_session}
 
+  defp load_workspace_context(%User{is_system_owner: true}, workspace_id) do
+    with :ok <- validate_binary_id(workspace_id),
+         {:ok, workspace} <- fetch_workspace(workspace_id),
+         :ok <- check_workspace_status(workspace) do
+      # System owners get :all permissions without requiring membership
+      {:ok, workspace, %{name: "System Owner"}, :all}
+    end
+  end
+
   defp load_workspace_context(user, workspace_id) do
     with :ok <- validate_binary_id(workspace_id),
          {:ok, workspace} <- fetch_workspace(workspace_id),

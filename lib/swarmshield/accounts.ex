@@ -766,6 +766,144 @@ defmodule Swarmshield.Accounts do
     {results, total_count}
   end
 
+  @doc """
+  Lists all users in a workspace with their roles preloaded.
+  Uses JOIN preloads to avoid N+1. Returns `{users_with_roles, total_count}`.
+
+  ## Options
+
+    * `:search` - filter by email (ILIKE)
+    * `:page` - page number (default 1)
+    * `:page_size` - items per page (default 50, max 100)
+  """
+  def list_workspace_users(workspace_id, opts \\ []) when is_binary(workspace_id) do
+    page = max(Keyword.get(opts, :page, 1), 1)
+
+    page_size =
+      opts |> Keyword.get(:page_size, @default_page_size) |> min(@max_page_size) |> max(1)
+
+    offset = (page - 1) * page_size
+
+    base_query =
+      from(uwr in UserWorkspaceRole,
+        where: uwr.workspace_id == ^workspace_id,
+        join: u in assoc(uwr, :user),
+        join: r in assoc(uwr, :role),
+        preload: [user: u, role: r]
+      )
+      |> maybe_filter_user_search(Keyword.get(opts, :search))
+
+    results =
+      base_query
+      |> order_by([uwr, u, _r], asc: u.email)
+      |> limit(^page_size)
+      |> offset(^offset)
+      |> Repo.all()
+
+    total_count =
+      from(uwr in UserWorkspaceRole, where: uwr.workspace_id == ^workspace_id)
+      |> maybe_filter_user_search_count(Keyword.get(opts, :search))
+      |> Repo.aggregate(:count)
+
+    {results, total_count}
+  end
+
+  defp maybe_filter_user_search(query, nil), do: query
+  defp maybe_filter_user_search(query, ""), do: query
+
+  defp maybe_filter_user_search(query, term) when is_binary(term) do
+    sanitized = "%#{sanitize_like(term)}%"
+    where(query, [_uwr, u, _r], ilike(u.email, ^sanitized))
+  end
+
+  defp maybe_filter_user_search_count(query, nil), do: query
+  defp maybe_filter_user_search_count(query, ""), do: query
+
+  defp maybe_filter_user_search_count(query, term) when is_binary(term) do
+    sanitized = "%#{sanitize_like(term)}%"
+
+    from(uwr in query,
+      join: u in assoc(uwr, :user),
+      where: ilike(u.email, ^sanitized)
+    )
+  end
+
+  @doc """
+  Lists all roles ordered by name. Used for role selection dropdowns.
+  """
+  def list_roles do
+    from(r in Role, order_by: [asc: r.name])
+    |> Repo.all()
+  end
+
+  @doc """
+  Gets a role by ID. Returns `nil` if not found.
+  """
+  def get_role(id) when is_binary(id) do
+    Repo.get(Role, id)
+  end
+
+  @doc """
+  Role hierarchy levels for escalation prevention.
+  Higher number = more privileges. A user can only assign roles
+  at or below their own level.
+  """
+  @role_levels %{
+    "super_admin" => 100,
+    "admin" => 80,
+    "analyst" => 40,
+    "viewer" => 20
+  }
+
+  def role_level(role_name) when is_binary(role_name) do
+    Map.get(@role_levels, role_name, 0)
+  end
+
+  @doc """
+  Changes a user's role within a workspace. Validates role escalation prevention:
+  the actor cannot assign a role with a higher level than their own.
+
+  Returns `{:ok, uwr}` or `{:error, reason}`.
+  """
+  def change_user_workspace_role(
+        %User{} = actor,
+        %User{} = target_user,
+        %Workspace{} = workspace,
+        %Role{} = new_role
+      ) do
+    actor_uwr = get_user_workspace_role(actor, workspace)
+    target_uwr = get_user_workspace_role(target_user, workspace)
+
+    cond do
+      is_nil(actor_uwr) ->
+        {:error, "You are not a member of this workspace."}
+
+      is_nil(target_uwr) ->
+        {:error, "User is not a member of this workspace."}
+
+      actor.id == target_user.id ->
+        {:error, "You cannot change your own role."}
+
+      role_level(new_role.name) > role_level(actor_uwr.role.name) ->
+        {:error, "Cannot assign a role with higher privileges than your own."}
+
+      true ->
+        assign_user_to_workspace(target_user, workspace, new_role)
+    end
+  end
+
+  @doc """
+  Counts super_admin users in a workspace.
+  Used to prevent removing the last super_admin.
+  """
+  def count_workspace_super_admins(workspace_id) when is_binary(workspace_id) do
+    from(uwr in UserWorkspaceRole,
+      join: r in assoc(uwr, :role),
+      where: uwr.workspace_id == ^workspace_id and r.name == "super_admin"
+    )
+    |> Repo.aggregate(:count)
+  end
+
   ## Audit Entries
 
   @doc """

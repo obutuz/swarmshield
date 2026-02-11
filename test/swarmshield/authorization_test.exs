@@ -263,6 +263,55 @@ defmodule Swarmshield.AuthorizationTest do
     end
   end
 
+  describe "system owner" do
+    test "system owner gets :all permissions for any active workspace", ctx do
+      system_owner = AccountsFixtures.user_fixture()
+
+      system_owner
+      |> Ecto.Changeset.change(is_system_owner: true)
+      |> Repo.update!()
+
+      # System owner is NOT a member of the workspace
+      assert Authorization.has_permission?(system_owner, ctx.workspace, "dashboard:view")
+      assert Authorization.has_permission?(system_owner, ctx.workspace, "agents:delete")
+      assert Authorization.has_permission?(system_owner, ctx.workspace, "anything:at_all")
+    end
+
+    test "system owner gets :all cached", ctx do
+      system_owner = AccountsFixtures.user_fixture()
+
+      system_owner
+      |> Ecto.Changeset.change(is_system_owner: true)
+      |> Repo.update!()
+
+      # Trigger cache population
+      Authorization.has_permission?(system_owner, ctx.workspace, "dashboard:view")
+
+      {:ok, cached} = AuthCache.get_permissions(system_owner.id, ctx.workspace.id)
+      assert cached == :all
+    end
+
+    test "system owner gets no permissions for suspended workspace", ctx do
+      system_owner = AccountsFixtures.user_fixture()
+
+      system_owner
+      |> Ecto.Changeset.change(is_system_owner: true)
+      |> Repo.update!()
+
+      {:ok, suspended} = Accounts.update_workspace(ctx.workspace, %{status: :suspended})
+      Authorization.invalidate_user_permissions(system_owner.id, suspended.id)
+
+      refute Authorization.has_permission?(system_owner, suspended, "dashboard:view")
+    end
+
+    test "non-system-owner does not get :all from system_owner path", ctx do
+      regular_user = AccountsFixtures.user_fixture()
+
+      # regular_user is NOT a member and NOT a system owner
+      refute Authorization.has_permission?(regular_user, ctx.workspace, "dashboard:view")
+    end
+  end
+
   describe "ETS resilience" do
     test "handles ETS table not available gracefully" do
       user = AccountsFixtures.user_fixture()

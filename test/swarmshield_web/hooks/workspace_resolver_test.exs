@@ -206,7 +206,28 @@ defmodule SwarmshieldWeb.Hooks.WorkspaceResolverTest do
       assert redirected_to(conn) == "/select-workspace"
     end
 
-    test "user_return_to overrides workspace resolution", %{conn: conn} do
+    test "user_return_to is preserved through workspace resolution for single workspace", %{
+      conn: conn
+    } do
+      user = user_fixture()
+      workspace = workspace_fixture()
+      role = role_fixture(%{name: "resolver_rto_#{System.unique_integer([:positive])}"})
+      {:ok, _} = Accounts.assign_user_to_workspace(user, workspace, role)
+      conn = assign(conn, :current_scope, Scope.for_user(user))
+
+      conn =
+        conn
+        |> put_session(:user_return_to, "/custom-path")
+        |> SwarmshieldWeb.UserAuth.log_in_user(user)
+
+      # Single workspace: auto-select + redirect to user_return_to
+      assert redirected_to(conn) == "/custom-path"
+      assert get_session(conn, :current_workspace_id) == workspace.id
+    end
+
+    test "user_return_to no longer bypasses workspace resolution for zero workspaces", %{
+      conn: conn
+    } do
       user = user_fixture()
       conn = assign(conn, :current_scope, Scope.for_user(user))
 
@@ -215,7 +236,8 @@ defmodule SwarmshieldWeb.Hooks.WorkspaceResolverTest do
         |> put_session(:user_return_to, "/custom-path")
         |> SwarmshieldWeb.UserAuth.log_in_user(user)
 
-      assert redirected_to(conn) == "/custom-path"
+      # No workspaces: always onboarding, regardless of user_return_to
+      assert redirected_to(conn) == "/onboarding"
     end
   end
 end

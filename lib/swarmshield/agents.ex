@@ -114,6 +114,18 @@ defmodule Swarmshield.Agents do
     |> Repo.all()
   end
 
+  @doc "Gets an agent definition scoped to a workspace. Raises on not found."
+  def get_agent_definition_for_workspace!(id, workspace_id)
+      when is_binary(id) and is_binary(workspace_id) do
+    from(ad in AgentDefinition, where: ad.id == ^id and ad.workspace_id == ^workspace_id)
+    |> Repo.one!()
+  end
+
+  @doc "Returns a changeset for an agent definition."
+  def change_agent_definition(%AgentDefinition{} = definition, attrs \\ %{}) do
+    AgentDefinition.changeset(definition, attrs)
+  end
+
   @doc "Checks if an agent definition belongs to the given workspace."
   def workspace_agent_definition?(id, workspace_id)
       when is_binary(id) and is_binary(workspace_id) do
@@ -191,6 +203,18 @@ defmodule Swarmshield.Agents do
       select: {pt.id, pt.name}
     )
     |> Repo.all()
+  end
+
+  @doc "Gets a prompt template scoped to a workspace. Raises on not found."
+  def get_prompt_template_for_workspace!(id, workspace_id)
+      when is_binary(id) and is_binary(workspace_id) do
+    from(pt in PromptTemplate, where: pt.id == ^id and pt.workspace_id == ^workspace_id)
+    |> Repo.one!()
+  end
+
+  @doc "Returns a changeset for a prompt template."
+  def change_prompt_template(%PromptTemplate{} = template, attrs \\ %{}) do
+    PromptTemplate.changeset(template, attrs)
   end
 
   @doc "Checks if a prompt template belongs to the given workspace."

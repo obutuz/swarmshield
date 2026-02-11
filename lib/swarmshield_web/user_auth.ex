@@ -38,14 +38,11 @@ defmodule SwarmshieldWeb.UserAuth do
   """
   def log_in_user(conn, user, params \\ %{}) do
     user_return_to = get_session(conn, :user_return_to)
-
     conn = create_or_extend_session(conn, user, params)
 
-    if user_return_to do
-      redirect(conn, to: user_return_to)
-    else
-      WorkspaceResolver.resolve_and_redirect(conn, user)
-    end
+    # Always resolve workspace - even when user_return_to is set.
+    # The resolver handles forwarding to the intended page after workspace selection.
+    WorkspaceResolver.resolve_and_redirect(conn, user, user_return_to)
   end
 
   @doc """

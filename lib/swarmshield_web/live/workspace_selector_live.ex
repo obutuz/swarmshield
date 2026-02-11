@@ -1,7 +1,12 @@
 defmodule SwarmshieldWeb.WorkspaceSelectorLive do
   @moduledoc """
   Displays a list of workspaces the user belongs to and allows selection.
-  Stub implementation - full workspace switching in a future story.
+
+  Selection works via phx-trigger-action: clicking "Select" sets the workspace_id
+  in a hidden form, which POSTs to WorkspaceSessionController to set the Plug session.
+
+  Auto-select: if the user has exactly 1 workspace, selection is triggered automatically.
+  System owners see ALL workspaces (not just their memberships).
   """
   use SwarmshieldWeb, :live_view
 
@@ -9,15 +14,41 @@ defmodule SwarmshieldWeb.WorkspaceSelectorLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :page_title, "Select Workspace")}
+    {:ok,
+     socket
+     |> assign(:page_title, "Select Workspace")
+     |> assign(:trigger_action, false)
+     |> assign(:selected_workspace_id, nil)}
   end
 
   @impl true
   def handle_params(_params, _uri, socket) do
     user = socket.assigns.current_scope.user
-    {workspaces, _count} = Accounts.list_user_workspaces(user, page_size: 50)
+    workspaces = load_workspaces(user)
 
-    {:noreply, assign(socket, :workspaces, workspaces)}
+    socket = assign(socket, :workspaces, workspaces)
+
+    # Auto-select if exactly 1 workspace
+    case workspaces do
+      [single] ->
+        workspace_id = extract_workspace_id(single)
+
+        {:noreply,
+         socket
+         |> assign(:selected_workspace_id, workspace_id)
+         |> assign(:trigger_action, true)}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("select_workspace", %{"workspace-id" => workspace_id}, socket) do
+    {:noreply,
+     socket
+     |> assign(:selected_workspace_id, workspace_id)
+     |> assign(:trigger_action, true)}
   end
 
   @impl true
@@ -43,26 +74,86 @@ defmodule SwarmshieldWeb.WorkspaceSelectorLive do
             </div>
 
             <div :if={@workspaces != []} class="space-y-3">
-              <div
-                :for={uwr <- @workspaces}
-                class="flex items-center justify-between p-4 bg-gray-900 border border-gray-700 rounded-lg hover:border-blue-500 transition-colors"
-              >
-                <div>
-                  <p class="text-gray-100 font-medium">{uwr.workspace.name}</p>
-                  <p class="text-gray-500 text-sm">{uwr.role.name}</p>
-                </div>
-                <.link
-                  navigate={~p"/"}
-                  class="h-[36px] px-4 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded inline-flex items-center"
-                >
-                  Select
-                </.link>
-              </div>
+              <.workspace_card
+                :for={item <- @workspaces}
+                item={item}
+                is_system_owner={@current_scope.user.is_system_owner}
+              />
             </div>
+
+            <%!-- Hidden form for phx-trigger-action POST to set session --%>
+            <.form
+              :if={@selected_workspace_id}
+              for={%{}}
+              as={:workspace}
+              action={~p"/set-workspace"}
+              phx-trigger-action={@trigger_action}
+              method="post"
+            >
+              <input type="hidden" name="workspace_id" value={@selected_workspace_id} />
+            </.form>
           </div>
         </div>
       </div>
     </Layouts.app>
     """
   end
+
+  attr :item, :any, required: true
+  attr :is_system_owner, :boolean, default: false
+
+  defp workspace_card(%{is_system_owner: true} = assigns) do
+    # System owners see raw Workspace structs (no UWR wrapper)
+    ~H"""
+    <div class="flex items-center justify-between p-4 bg-gray-900 border border-gray-700 rounded-lg hover:border-blue-500 transition-colors">
+      <div>
+        <p class="text-gray-100 font-medium">{@item.name}</p>
+        <p class="text-gray-500 text-sm">System Owner</p>
+      </div>
+      <button
+        type="button"
+        phx-click="select_workspace"
+        phx-value-workspace-id={@item.id}
+        class="h-[36px] px-4 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded inline-flex items-center"
+      >
+        Select
+      </button>
+    </div>
+    """
+  end
+
+  defp workspace_card(assigns) do
+    # Regular users see UWR structs with preloaded workspace + role
+    ~H"""
+    <div class="flex items-center justify-between p-4 bg-gray-900 border border-gray-700 rounded-lg hover:border-blue-500 transition-colors">
+      <div>
+        <p class="text-gray-100 font-medium">{@item.workspace.name}</p>
+        <p class="text-gray-500 text-sm">{@item.role.name}</p>
+      </div>
+      <button
+        type="button"
+        phx-click="select_workspace"
+        phx-value-workspace-id={@item.workspace_id}
+        class="h-[36px] px-4 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded inline-flex items-center"
+      >
+        Select
+      </button>
+    </div>
+    """
+  end
+
+  # System owners see ALL workspaces; regular users see their memberships
+  defp load_workspaces(%{is_system_owner: true} = _user) do
+    {workspaces, _count} = Accounts.list_workspaces(page_size: 50)
+    workspaces
+  end
+
+  defp load_workspaces(user) do
+    {workspaces, _count} = Accounts.list_user_workspaces(user, page_size: 50)
+    workspaces
+  end
+
+  # Extract workspace_id from either a Workspace struct or UWR struct
+  defp extract_workspace_id(%Accounts.Workspace{id: id}), do: id
+  defp extract_workspace_id(%{workspace_id: id}), do: id
 end

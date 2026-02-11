@@ -77,6 +77,7 @@ defmodule SwarmshieldWeb.Router do
     end
 
     post "/users/update-password", UserSessionController, :update_password
+    post "/set-workspace", WorkspaceSessionController, :create
   end
 
   ## Workspace-authenticated routes
@@ -123,6 +124,28 @@ defmodule SwarmshieldWeb.Router do
       live "/workflows/new", WorkflowsLive, :new
       live "/workflows/:id", WorkflowShowLive, :show
       live "/workflows/:id/edit", WorkflowsLive, :edit
+      live "/consensus-policies", PoliciesLive, :index
+      live "/consensus-policies/new", PoliciesLive, :new
+      live "/consensus-policies/:id/edit", PoliciesLive, :edit
+      live "/policy-rules", PolicyRulesLive, :index
+      live "/policy-rules/new", PolicyRulesLive, :new
+      live "/policy-rules/:id/edit", PolicyRulesLive, :edit
+      live "/detection-rules", DetectionRulesLive, :index
+      live "/detection-rules/new", DetectionRulesLive, :new
+      live "/detection-rules/:id/edit", DetectionRulesLive, :edit
+      live "/agent-definitions", AgentDefinitionsLive, :index
+      live "/agent-definitions/new", AgentDefinitionsLive, :new
+      live "/agent-definitions/:id/edit", AgentDefinitionsLive, :edit
+      live "/prompt-templates", PromptTemplatesLive, :index
+      live "/prompt-templates/new", PromptTemplatesLive, :new
+      live "/prompt-templates/:id/edit", PromptTemplatesLive, :edit
+      live "/ghost-protocol-configs", GhostProtocolConfigsLive, :index
+      live "/ghost-protocol-configs/new", GhostProtocolConfigsLive, :new
+      live "/ghost-protocol-configs/:id/edit", GhostProtocolConfigsLive, :edit
+      live "/ghost-protocol-configs/:id", GhostProtocolConfigShowLive, :show
+      live "/registered-agents", RegisteredAgentsLive, :index
+      live "/registered-agents/new", RegisteredAgentsLive, :new
+      live "/registered-agents/:id/edit", RegisteredAgentsLive, :edit
     end
   end
 

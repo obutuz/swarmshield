@@ -31,28 +31,49 @@ defmodule SwarmshieldWeb.Hooks.WorkspaceResolver do
   @doc """
   Resolves the user's workspace after login and redirects accordingly.
 
-  Called from `UserAuth.log_in_user/3` when there is no `user_return_to` path.
+  Called from `UserAuth.log_in_user/3` after session creation.
 
-  - 0 workspaces → redirect to /onboarding
-  - 1 workspace → sets `current_workspace_id` in session, redirect to /dashboard
-  - 2+ workspaces → redirect to /select-workspace
+  - 0 workspaces → redirect to /onboarding (ignores redirect_to)
+  - 1 workspace → sets `current_workspace_id` in session, redirect to redirect_to or /dashboard
+  - 2+ workspaces → stores redirect_to in session for post-selection, redirect to /select-workspace
+
+  The optional `redirect_to` parameter preserves the user's intended destination
+  (e.g. when they were redirected to login from a protected page).
   """
-  def resolve_and_redirect(conn, %User{} = user) do
+  def resolve_and_redirect(conn, %User{} = user, redirect_to \\ nil) do
     {workspaces, total_count} = Accounts.list_user_workspaces(user, page_size: 2)
+    destination = redirect_to || @dashboard_path
 
-    case {workspaces, total_count} do
-      {_, 0} ->
-        redirect(conn, to: @onboarding_path)
+    case {user, workspaces, total_count} do
+      # System owner with no memberships → workspace selector (they can access any workspace)
+      {%User{is_system_owner: true}, _, 0} ->
+        conn
+        |> maybe_store_return_to(redirect_to)
+        |> redirect(to: @workspace_selector_path)
 
-      {[single], 1} ->
+      # Regular user with no workspaces → onboarding
+      {_, _, 0} ->
+        conn
+        |> delete_session(:user_return_to)
+        |> redirect(to: @onboarding_path)
+
+      # Single workspace → auto-select and redirect to destination
+      {_, [single], 1} ->
         conn
         |> put_session(:current_workspace_id, single.workspace_id)
-        |> redirect(to: @dashboard_path)
+        |> delete_session(:user_return_to)
+        |> redirect(to: destination)
 
-      {_, _count} ->
-        redirect(conn, to: @workspace_selector_path)
+      # Multiple workspaces → workspace selector
+      {_, _, _count} ->
+        conn
+        |> maybe_store_return_to(redirect_to)
+        |> redirect(to: @workspace_selector_path)
     end
   end
+
+  defp maybe_store_return_to(conn, nil), do: delete_session(conn, :user_return_to)
+  defp maybe_store_return_to(conn, path), do: put_session(conn, :user_return_to, path)
 
   # --- Plug interface for session validation ---
 
@@ -103,6 +124,9 @@ defmodule SwarmshieldWeb.Hooks.WorkspaceResolver do
         |> halt()
     end
   end
+
+  # System owners bypass membership check
+  defp validate_membership(conn, %User{is_system_owner: true}, _workspace), do: conn
 
   defp validate_membership(conn, user, workspace) do
     case Accounts.get_user_workspace_role(user, workspace) do

@@ -60,9 +60,14 @@ defmodule SwarmshieldWeb.UserAuthTest do
       refute get_session(conn, :to_be_removed)
     end
 
-    test "redirects to the configured path", %{conn: conn, user: user} do
+    test "redirects to onboarding for user with no workspaces even with user_return_to", %{
+      conn: conn,
+      user: user
+    } do
+      # user_return_to no longer bypasses workspace resolution
+      # Users with 0 workspaces always go to onboarding
       conn = conn |> put_session(:user_return_to, "/hello") |> UserAuth.log_in_user(user)
-      assert redirected_to(conn) == "/hello"
+      assert redirected_to(conn) == "/onboarding"
     end
 
     test "writes a cookie if remember_me is configured", %{conn: conn, user: user} do

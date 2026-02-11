@@ -30,12 +30,16 @@ defmodule SwarmshieldWeb.OnboardingLiveTest do
       assert path =~ "/users/log-in"
     end
 
-    test "redirects user with existing workspace to dashboard", %{conn: conn, user: user} do
+    test "redirects user with existing workspace to workspace selector", %{
+      conn: conn,
+      user: user
+    } do
       workspace = workspace_fixture()
       role = role_fixture(%{name: "onboard_redirect_role"})
       {:ok, _} = Accounts.assign_user_to_workspace(user, workspace, role)
 
-      assert {:error, {:live_redirect, %{to: "/dashboard"}}} = live(conn, ~p"/onboarding")
+      assert {:error, {:live_redirect, %{to: "/select-workspace"}}} =
+               live(conn, ~p"/onboarding")
     end
   end
 
@@ -127,18 +131,21 @@ defmodule SwarmshieldWeb.OnboardingLiveTest do
       assert html =~ "Copied!"
     end
 
-    test "continue to dashboard navigates away", %{conn: conn} do
+    test "continue to dashboard triggers workspace session form", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/onboarding")
 
       # Create workspace first
-      lv
-      |> form("#onboarding-form", workspace: %{name: "Navigate Test"})
-      |> render_submit()
+      html =
+        lv
+        |> form("#onboarding-form", workspace: %{name: "Navigate Test"})
+        |> render_submit()
 
-      # Click continue
-      render_click(lv, "continue_to_dashboard")
+      # Verify the hidden form with workspace_id is rendered
+      assert html =~ "/set-workspace"
 
-      assert_redirect(lv, "/dashboard")
+      # Click continue - triggers phx-trigger-action which submits the form
+      html = render_click(lv, "continue_to_dashboard")
+      assert html =~ "phx-trigger-action"
     end
   end
 

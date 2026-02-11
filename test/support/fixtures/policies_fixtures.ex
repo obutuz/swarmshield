@@ -84,7 +84,10 @@ defmodule Swarmshield.PoliciesFixtures do
           {wid, rest}
       end
 
-    rule_attrs = valid_detection_rule_attributes(attrs)
+    rule_attrs =
+      attrs
+      |> valid_detection_rule_attributes()
+      |> apply_type_defaults()
 
     {:ok, rule} =
       %DetectionRule{workspace_id: workspace_id}
@@ -93,6 +96,18 @@ defmodule Swarmshield.PoliciesFixtures do
 
     rule
   end
+
+  defp apply_type_defaults(%{detection_type: :keyword} = attrs) do
+    attrs
+    |> Map.put_new(:keywords, ["test_keyword", "test_secret"])
+    |> Map.delete(:pattern)
+  end
+
+  defp apply_type_defaults(%{detection_type: :semantic} = attrs) do
+    Map.delete(attrs, :pattern)
+  end
+
+  defp apply_type_defaults(attrs), do: attrs
 
   # PolicyViolation fixtures
 

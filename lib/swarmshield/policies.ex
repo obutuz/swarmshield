@@ -77,6 +77,28 @@ defmodule Swarmshield.Policies do
     Repo.get!(PolicyRule, id)
   end
 
+  @doc "Returns a workspace-scoped policy rule or raises Ecto.NoResultsError."
+  def get_policy_rule_for_workspace!(id, workspace_id)
+      when is_binary(id) and is_binary(workspace_id) do
+    from(r in PolicyRule, where: r.id == ^id and r.workspace_id == ^workspace_id)
+    |> Repo.one!()
+  end
+
+  @doc "Returns a changeset for tracking policy rule form changes."
+  def change_policy_rule(%PolicyRule{} = rule, attrs \\ %{}) do
+    PolicyRule.changeset(rule, attrs)
+  end
+
+  @doc "Lists enabled detection rules as {id, name} tuples for select dropdowns."
+  def list_detection_rules_for_select(workspace_id) when is_binary(workspace_id) do
+    from(dr in DetectionRule,
+      where: dr.workspace_id == ^workspace_id and dr.enabled == true,
+      order_by: [asc: dr.name],
+      select: {dr.id, dr.name}
+    )
+    |> Repo.all()
+  end
+
   @doc """
   Creates a policy rule. workspace_id is set server-side.
 
@@ -214,6 +236,18 @@ defmodule Swarmshield.Policies do
   """
   def get_detection_rule!(id) when is_binary(id) do
     Repo.get!(DetectionRule, id)
+  end
+
+  @doc "Returns a workspace-scoped detection rule or raises Ecto.NoResultsError."
+  def get_detection_rule_for_workspace!(id, workspace_id)
+      when is_binary(id) and is_binary(workspace_id) do
+    from(r in DetectionRule, where: r.id == ^id and r.workspace_id == ^workspace_id)
+    |> Repo.one!()
+  end
+
+  @doc "Returns a changeset for tracking detection rule form changes."
+  def change_detection_rule(%DetectionRule{} = rule, attrs \\ %{}) do
+    DetectionRule.changeset(rule, attrs)
   end
 
   @doc """

@@ -22,6 +22,18 @@ defmodule SwarmshieldWeb.OnboardingLive do
           <% end %>
         </div>
       </div>
+
+      <%!-- Hidden form for phx-trigger-action POST to set workspace session --%>
+      <.form
+        :if={@created_workspace_id}
+        for={%{}}
+        as={:workspace}
+        action={~p"/set-workspace"}
+        phx-trigger-action={@trigger_action}
+        method="post"
+      >
+        <input type="hidden" name="workspace_id" value={@created_workspace_id} />
+      </.form>
     </Layouts.app>
     """
   end
@@ -178,6 +190,8 @@ defmodule SwarmshieldWeb.OnboardingLive do
      |> assign(:workspace_name, "")
      |> assign(:raw_api_key, "")
      |> assign(:key_copied, false)
+     |> assign(:created_workspace_id, nil)
+     |> assign(:trigger_action, false)
      |> assign_form(Accounts.change_workspace(%Workspace{}))}
   end
 
@@ -193,7 +207,7 @@ defmodule SwarmshieldWeb.OnboardingLive do
         {:noreply,
          socket
          |> put_flash(:info, "You already have a workspace.")
-         |> push_navigate(to: "/dashboard")}
+         |> push_navigate(to: "/select-workspace")}
     end
   end
 
@@ -226,7 +240,8 @@ defmodule SwarmshieldWeb.OnboardingLive do
          |> assign(:step, :success)
          |> assign(:workspace_name, workspace.name)
          |> assign(:raw_api_key, raw_key)
-         |> assign(:key_copied, false)}
+         |> assign(:key_copied, false)
+         |> assign(:created_workspace_id, workspace.id)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign_form(socket, changeset)}
@@ -247,7 +262,7 @@ defmodule SwarmshieldWeb.OnboardingLive do
   end
 
   def handle_event("continue_to_dashboard", _params, socket) do
-    {:noreply, push_navigate(socket, to: "/dashboard")}
+    {:noreply, assign(socket, :trigger_action, true)}
   end
 
   # --- Helpers ---

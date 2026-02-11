@@ -188,6 +188,47 @@ defmodule Swarmshield.Gateway do
   end
 
   @doc """
+  Deletes a registered agent. Returns `{:ok, agent}` or `{:error, reason}`.
+
+  Prevents deletion if the agent has events within the last 24 hours.
+  """
+  def delete_registered_agent(%RegisteredAgent{} = agent) do
+    since = DateTime.add(DateTime.utc_now(:second), -24, :hour)
+
+    recent_count =
+      from(e in AgentEvent,
+        where: e.registered_agent_id == ^agent.id and e.inserted_at >= ^since,
+        select: count(e.id)
+      )
+      |> Repo.one()
+
+    if recent_count > 0 do
+      {:error, "Cannot delete agent with #{recent_count} event(s) in the last 24 hours."}
+    else
+      Repo.delete(agent)
+    end
+  end
+
+  @doc """
+  Returns a changeset for tracking agent form changes.
+  """
+  def change_registered_agent(%RegisteredAgent{} = agent, attrs \\ %{}) do
+    RegisteredAgent.changeset(agent, attrs)
+  end
+
+  @doc """
+  Gets a registered agent by ID scoped to a workspace.
+  Raises `Ecto.NoResultsError` if not found.
+  """
+  def get_registered_agent_for_workspace!(id, workspace_id)
+      when is_binary(id) and is_binary(workspace_id) do
+    from(a in RegisteredAgent,
+      where: a.id == ^id and a.workspace_id == ^workspace_id
+    )
+    |> Repo.one!()
+  end
+
+  @doc """
   Updates last_seen_at for a registered agent atomically.
 
   Uses `Repo.update_all` to avoid read-modify-write race conditions.

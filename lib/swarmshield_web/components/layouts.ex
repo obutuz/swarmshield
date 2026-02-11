@@ -327,37 +327,89 @@ defmodule SwarmshieldWeb.Layouts do
       active={@active_nav == :audit}
     />
 
-    <%!-- Admin section --%>
+    <%!-- Admin section (collapsible, permission-gated) --%>
     <%= if has_perm?(@user_permissions, "admin:access") do %>
-      <div class="pt-4 mt-4 border-t-[0.5px] border-base-300">
-        <div class="px-3 mb-2 text-xs font-medium uppercase tracking-wider text-base-content/50">
-          Admin
+      <details open class="pt-4 mt-4 border-t-[0.5px] border-base-300 group/admin">
+        <summary class="px-3 mb-2 text-xs font-medium uppercase tracking-wider text-base-content/50 cursor-pointer list-none select-none flex items-center justify-between">
+          <span>Admin</span>
+          <.icon
+            name="hero-chevron-down-mini"
+            class="size-3 transition-transform duration-200 group-open/admin:rotate-180"
+          />
+        </summary>
+        <div class="space-y-1">
+          <%= if has_perm?(@user_permissions, "workflows:view") do %>
+            <.nav_item
+              path={~p"/admin/workflows"}
+              icon="hero-arrow-path"
+              label="Workflows"
+              active={@active_nav == :admin_workflows}
+            />
+          <% end %>
+          <%= if has_perm?(@user_permissions, "policies:view") do %>
+            <.nav_item
+              path={~p"/admin/consensus-policies"}
+              icon="hero-check-badge"
+              label="Consensus Policies"
+              active={@active_nav == :admin_policies}
+            />
+            <.nav_item
+              path={~p"/admin/policy-rules"}
+              icon="hero-shield-exclamation"
+              label="Policy Rules"
+              active={@active_nav == :admin_policy_rules}
+            />
+            <.nav_item
+              path={~p"/admin/detection-rules"}
+              icon="hero-funnel"
+              label="Detection Rules"
+              active={@active_nav == :admin_detection_rules}
+            />
+          <% end %>
+          <%= if has_perm?(@user_permissions, "agents:view") do %>
+            <.nav_item
+              path={~p"/admin/agent-definitions"}
+              icon="hero-square-3-stack-3d"
+              label="Agent Definitions"
+              active={@active_nav == :admin_agent_definitions}
+            />
+            <.nav_item
+              path={~p"/admin/prompt-templates"}
+              icon="hero-document-text"
+              label="Prompt Templates"
+              active={@active_nav == :admin_prompt_templates}
+            />
+            <.nav_item
+              path={~p"/admin/registered-agents"}
+              icon="hero-key"
+              label="Registered Agents"
+              active={@active_nav == :admin_registered_agents}
+            />
+          <% end %>
+          <%= if has_perm?(@user_permissions, "ghost_protocol:view") do %>
+            <.nav_item
+              path={~p"/admin/ghost-protocol-configs"}
+              icon="hero-eye-slash"
+              label="GhostProtocol Configs"
+              active={@active_nav == :admin_ghost_protocol}
+            />
+          <% end %>
+          <%= if has_perm?(@user_permissions, "settings:view") do %>
+            <.nav_item
+              path={~p"/admin/settings"}
+              icon="hero-cog-6-tooth"
+              label="Settings"
+              active={@active_nav == :admin_settings}
+            />
+            <.nav_item
+              path={~p"/admin/users"}
+              icon="hero-users"
+              label="Users"
+              active={@active_nav == :admin_users}
+            />
+          <% end %>
         </div>
-        <.nav_item
-          path={~p"/admin/settings"}
-          icon="hero-cog-6-tooth"
-          label="Settings"
-          active={@active_nav == :admin_settings}
-        />
-        <.nav_item
-          path={~p"/admin/roles"}
-          icon="hero-user-group"
-          label="Roles & Users"
-          active={@active_nav == :admin_roles}
-        />
-        <.nav_item
-          path={~p"/admin/users"}
-          icon="hero-users"
-          label="Users"
-          active={@active_nav == :admin_users}
-        />
-        <.nav_item
-          path={~p"/admin/workflows"}
-          icon="hero-arrow-path"
-          label="Workflows"
-          active={@active_nav == :admin_workflows}
-        />
-      </div>
+      </details>
     <% end %>
     """
   end

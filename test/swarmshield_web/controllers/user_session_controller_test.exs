@@ -43,7 +43,10 @@ defmodule SwarmshieldWeb.UserSessionControllerTest do
       assert redirected_to(conn) == "/onboarding"
     end
 
-    test "logs the user in with return to", %{conn: conn, user: user} do
+    test "logs the user in with return to (no workspaces goes to onboarding)", %{
+      conn: conn,
+      user: user
+    } do
       user = set_password(user)
 
       conn =
@@ -56,7 +59,9 @@ defmodule SwarmshieldWeb.UserSessionControllerTest do
           }
         })
 
-      assert redirected_to(conn) == "/foo/bar"
+      # User has no workspaces, so workspace resolver sends to onboarding
+      # regardless of user_return_to
+      assert redirected_to(conn) == "/onboarding"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Welcome back!"
     end
 

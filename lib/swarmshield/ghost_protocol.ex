@@ -64,6 +64,11 @@ defmodule Swarmshield.GhostProtocol do
     |> Repo.preload(:workflows)
   end
 
+  @doc "Returns a changeset for a GhostProtocol config."
+  def change_config(%Config{} = config, attrs \\ %{}) do
+    Config.changeset(config, attrs)
+  end
+
   def create_config(workspace_id, attrs) when is_binary(workspace_id) and is_map(attrs) do
     result =
       %Config{workspace_id: workspace_id}

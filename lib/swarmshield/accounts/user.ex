@@ -13,6 +13,7 @@ defmodule Swarmshield.Accounts.User do
     field :hashed_password, :string, redact: true
     field :confirmed_at, :utc_datetime
     field :authenticated_at, :utc_datetime, virtual: true
+    field :is_system_owner, :boolean, default: false
 
     has_many :user_workspace_roles, Swarmshield.Accounts.UserWorkspaceRole
     has_many :workspaces, through: [:user_workspace_roles, :workspace]

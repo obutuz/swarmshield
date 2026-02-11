@@ -14,7 +14,7 @@ defmodule Swarmshield.Authorization do
 
   import Ecto.Query, warn: false
 
-  alias Swarmshield.Accounts.{Permission, RolePermission, UserWorkspaceRole, Workspace}
+  alias Swarmshield.Accounts.{Permission, RolePermission, User, UserWorkspaceRole, Workspace}
   alias Swarmshield.Authorization.AuthCache
   alias Swarmshield.Repo
 
@@ -132,16 +132,27 @@ defmodule Swarmshield.Authorization do
   end
 
   defp load_permissions_from_db(user_id, workspace_id) do
-    # Check workspace status first - suspended workspaces grant no permissions
-    case Repo.get(Workspace, workspace_id) do
-      %Workspace{status: status} when status != :active ->
-        MapSet.new()
+    # System owners get :all permissions regardless of workspace membership
+    case Repo.get(User, user_id) do
+      %User{is_system_owner: true} ->
+        # Still verify workspace exists and is active
+        case Repo.get(Workspace, workspace_id) do
+          %Workspace{status: :active} -> :all
+          _ -> MapSet.new()
+        end
 
-      %Workspace{} ->
-        load_user_permissions(user_id, workspace_id)
+      _ ->
+        # Regular user: check workspace status, then load role-based permissions
+        case Repo.get(Workspace, workspace_id) do
+          %Workspace{status: status} when status != :active ->
+            MapSet.new()
 
-      nil ->
-        MapSet.new()
+          %Workspace{} ->
+            load_user_permissions(user_id, workspace_id)
+
+          nil ->
+            MapSet.new()
+        end
     end
   end
 

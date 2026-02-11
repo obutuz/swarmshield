@@ -316,6 +316,20 @@ defmodule Swarmshield.Workflows do
     Repo.get!(ConsensusPolicy, id)
   end
 
+  @doc "Returns a workspace-scoped consensus policy or raises Ecto.NoResultsError."
+  def get_consensus_policy_for_workspace!(id, workspace_id)
+      when is_binary(id) and is_binary(workspace_id) do
+    from(cp in ConsensusPolicy,
+      where: cp.id == ^id and cp.workspace_id == ^workspace_id
+    )
+    |> Repo.one!()
+  end
+
+  @doc "Returns a changeset for tracking consensus policy form changes."
+  def change_consensus_policy(%ConsensusPolicy{} = policy, attrs \\ %{}) do
+    ConsensusPolicy.changeset(policy, attrs)
+  end
+
   def create_consensus_policy(workspace_id, attrs)
       when is_binary(workspace_id) and is_map(attrs) do
     result =
@@ -359,14 +373,25 @@ defmodule Swarmshield.Workflows do
     policy_id = policy.id
     workspace_id = policy.workspace_id
 
-    case Repo.delete(policy) do
-      {:ok, deleted} ->
-        audit_async("consensus_policy.deleted", "consensus_policy", policy_id, workspace_id)
-        {:ok, deleted}
+    if consensus_policy_referenced?(policy_id) do
+      {:error, :referenced_by_sessions}
+    else
+      case Repo.delete(policy) do
+        {:ok, deleted} ->
+          audit_async("consensus_policy.deleted", "consensus_policy", policy_id, workspace_id)
+          {:ok, deleted}
 
-      error ->
-        error
+        error ->
+          error
+      end
     end
+  end
+
+  defp consensus_policy_referenced?(policy_id) when is_binary(policy_id) do
+    from(s in Swarmshield.Deliberation.AnalysisSession,
+      where: s.consensus_policy_id == ^policy_id
+    )
+    |> Repo.exists?()
   end
 
   # ---------------------------------------------------------------------------

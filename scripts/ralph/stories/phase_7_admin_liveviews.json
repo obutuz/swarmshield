@@ -111,7 +111,7 @@
       "title": "Create PoliciesLive consensus policy CRUD",
       "description": "Admin view for managing consensus policies (voting strategies). CRUD operations for majority, supermajority, unanimous, and weighted voting configurations.",
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "dependsOn": [],
       "acceptanceCriteria": [
         "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
@@ -147,7 +147,7 @@
       "title": "Create PolicyRulesLive",
       "description": "Admin view for managing policy rules (allow/flag/block). CRUD with ETS cache refresh on changes. Each rule type has specific configuration fields.",
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "dependsOn": [],
       "acceptanceCriteria": [
         "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
@@ -188,7 +188,7 @@
       "title": "Create DetectionRulesLive",
       "description": "Admin view for managing detection rules (regex patterns and keyword lists). CRUD with regex validation and preview.",
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "dependsOn": [],
       "acceptanceCriteria": [
         "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
@@ -229,7 +229,7 @@
       "title": "Create AgentDefinitionsLive",
       "description": "Admin view for managing Opus 4.6 agent definitions (AI personas used in deliberation). CRUD for agent configuration including system prompts and model parameters.",
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "dependsOn": [],
       "acceptanceCriteria": [
         "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
@@ -265,7 +265,7 @@
       "title": "Create PromptTemplatesLive",
       "description": "Admin view for managing prompt templates with variable interpolation preview. CRUD with template variable extraction and live preview.",
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "dependsOn": [],
       "acceptanceCriteria": [
         "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
@@ -305,7 +305,7 @@
       "title": "Create GhostProtocolConfigsLive (retention policy CRUD)",
       "description": "Admin view for managing GhostProtocol retention configurations. Full CRUD for ghost_protocol_configs including wipe strategy selection, field targeting, crypto_shred toggle, and session duration limits. This is the admin interface for SwarmShield's flagship security feature - ephemeral agent lifecycle management.",
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "dependsOn": [],
       "acceptanceCriteria": [
         "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
@@ -352,7 +352,7 @@
       "title": "Create GhostProtocolConfigShowLive (config detail + linked workflows)",
       "description": "Detail view for a specific GhostProtocol config. Shows all settings, linked workflows using this config, recent wipe history for sessions that used this config, and emergency force-wipe capability for active sessions.",
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "ADMIN-008"
       ],
@@ -395,7 +395,7 @@
       "title": "Create SettingsLive",
       "description": "Workspace settings view for configuring workspace-level preferences. Budget limits, notification preferences, API configuration.",
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "dependsOn": [],
       "acceptanceCriteria": [
         "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
@@ -430,7 +430,7 @@
       "title": "Create UsersLive",
       "description": "User management view for workspace admins. View users in workspace, invite new users, assign/change roles, remove users from workspace.",
       "priority": 11,
-      "passes": false,
+      "passes": true,
       "dependsOn": [],
       "acceptanceCriteria": [
         "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
@@ -467,7 +467,7 @@
       "title": "Create RegisteredAgentsLive CRUD",
       "description": "Admin view for managing registered external AI agents. CRUD operations including API key generation, status management (active/suspended), and risk level configuration.",
       "priority": 12,
-      "passes": false,
+      "passes": true,
       "dependsOn": [],
       "acceptanceCriteria": [
         "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
@@ -512,7 +512,7 @@
       "title": "Sidebar navigation with role-based menu items including GhostProtocol",
       "description": "Update sidebar navigation to show menu items based on user's role and permissions. Dashboard items visible to all, admin items only to admin/super_admin. Includes GhostProtocol section in both dashboard and admin areas.",
       "priority": 13,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "ADMIN-001",
         "ADMIN-002",

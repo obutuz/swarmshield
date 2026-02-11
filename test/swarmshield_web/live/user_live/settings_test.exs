@@ -92,6 +92,11 @@ defmodule SwarmshieldWeb.UserLive.SettingsTest do
   describe "update password form" do
     setup %{conn: conn} do
       user = user_fixture()
+      # User needs a workspace so the re-login after password change
+      # can resolve workspace and redirect back to settings
+      workspace = workspace_fixture()
+      role = role_fixture(%{name: "settings_pw_#{System.unique_integer([:positive])}"})
+      user_workspace_role_fixture(user, workspace, role)
       %{conn: log_in_user(conn, user), user: user}
     end
 
