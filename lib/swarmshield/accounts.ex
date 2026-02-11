@@ -6,7 +6,7 @@ defmodule Swarmshield.Accounts do
   import Ecto.Query, warn: false
   alias Swarmshield.Repo
 
-  alias Swarmshield.Accounts.{User, UserNotifier, UserToken}
+  alias Swarmshield.Accounts.{AuditEntry, User, UserNotifier, UserToken}
 
   ## Database getters
 
@@ -294,4 +294,90 @@ defmodule Swarmshield.Accounts do
       end
     end)
   end
+
+  ## Audit Entries
+
+  @doc """
+  Creates an immutable audit entry. Returns `{:ok, audit_entry}` or `{:error, changeset}`.
+
+  Audit entries are insert-only and can never be updated or deleted.
+  Metadata is automatically sanitized to remove sensitive fields.
+  """
+  def create_audit_entry(attrs) do
+    %AuditEntry{}
+    |> AuditEntry.create_changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @default_page_size 50
+  @max_page_size 100
+
+  @doc """
+  Lists audit entries for a workspace with filtering and pagination.
+
+  `workspace_id` is mandatory - audit data is always workspace-scoped.
+
+  ## Options
+
+    * `:action` - filter by action string
+    * `:actor_id` - filter by actor UUID
+    * `:resource_type` - filter by resource type
+    * `:from` - start datetime (inclusive)
+    * `:to` - end datetime (inclusive)
+    * `:page` - page number (default 1)
+    * `:page_size` - items per page (default 50, max 100)
+
+  Returns `{entries, total_count}`.
+  """
+  def list_audit_entries(workspace_id, opts \\ [])
+
+  def list_audit_entries(workspace_id, opts) when is_binary(workspace_id) do
+    page = max(Keyword.get(opts, :page, 1), 1)
+
+    page_size =
+      opts |> Keyword.get(:page_size, @default_page_size) |> min(@max_page_size) |> max(1)
+
+    offset = (page - 1) * page_size
+
+    base_query =
+      from(a in AuditEntry, where: a.workspace_id == ^workspace_id)
+      |> apply_audit_filters(opts)
+
+    entries =
+      base_query
+      |> order_by([a], desc: a.inserted_at)
+      |> limit(^page_size)
+      |> offset(^offset)
+      |> Repo.all()
+
+    total_count = Repo.aggregate(base_query, :count)
+
+    {entries, total_count}
+  end
+
+  defp apply_audit_filters(query, opts) do
+    query
+    |> maybe_filter_action(Keyword.get(opts, :action))
+    |> maybe_filter_actor(Keyword.get(opts, :actor_id))
+    |> maybe_filter_resource_type(Keyword.get(opts, :resource_type))
+    |> maybe_filter_from(Keyword.get(opts, :from))
+    |> maybe_filter_to(Keyword.get(opts, :to))
+  end
+
+  defp maybe_filter_action(query, nil), do: query
+  defp maybe_filter_action(query, action), do: where(query, [a], a.action == ^action)
+
+  defp maybe_filter_actor(query, nil), do: query
+  defp maybe_filter_actor(query, actor_id), do: where(query, [a], a.actor_id == ^actor_id)
+
+  defp maybe_filter_resource_type(query, nil), do: query
+
+  defp maybe_filter_resource_type(query, resource_type),
+    do: where(query, [a], a.resource_type == ^resource_type)
+
+  defp maybe_filter_from(query, nil), do: query
+  defp maybe_filter_from(query, from), do: where(query, [a], a.inserted_at >= ^from)
+
+  defp maybe_filter_to(query, nil), do: query
+  defp maybe_filter_to(query, to), do: where(query, [a], a.inserted_at <= ^to)
 end

@@ -196,4 +196,26 @@ defmodule Swarmshield.AccountsFixtures do
 
     uwr
   end
+
+  # AuditEntry fixtures
+
+  def valid_audit_entry_attributes(attrs \\ %{}) do
+    Enum.into(attrs, %{
+      action: "test.action",
+      resource_type: "test_resource",
+      metadata: %{}
+    })
+  end
+
+  def audit_entry_fixture(attrs \\ %{}) do
+    alias Swarmshield.Accounts.AuditEntry
+
+    {:ok, audit_entry} =
+      attrs
+      |> valid_audit_entry_attributes()
+      |> then(&AuditEntry.create_changeset(%AuditEntry{}, &1))
+      |> Repo.insert()
+
+    audit_entry
+  end
 end

@@ -340,7 +340,7 @@
       "title": "Create AuditEntry schema",
       "description": "Immutable, insert-only audit log. Every significant action in the system creates an audit entry. This is critical for security compliance - audit entries are never updated or deleted.",
       "priority": 12,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "AUTH-001"
       ],

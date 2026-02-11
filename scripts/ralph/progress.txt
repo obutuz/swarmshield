@@ -17,3 +17,4 @@ AUTH-004 DONE 2026-02-10 Create Role schema with database-driven permissions - 1
 AUTH-005 DONE 2026-02-10 Create Permission schema - 169 tests pass, credo clean
 AUTH-006 DONE 2026-02-10 Create RolePermission join table - 169 tests pass, credo clean
 AUTH-007 DONE 2026-02-10 Create UserWorkspaceRole junction - 180 tests pass, credo clean
+AUTH-012 DONE 2026-02-10 Create AuditEntry schema - 217 tests pass, credo clean
