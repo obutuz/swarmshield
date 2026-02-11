@@ -136,7 +136,7 @@
       "title": "Create PolicyEngine pure-function module",
       "description": "PolicyEngine is a pure-function module (no GenServer, no side effects) that evaluates an agent event against cached policy rules. Returns an evaluation result with matched rules and recommended action.",
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "POLICY-003"
       ],
