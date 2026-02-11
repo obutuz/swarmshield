@@ -55,4 +55,54 @@ defmodule Swarmshield.GatewayFixtures do
 
     agent
   end
+
+  # AgentEvent fixtures
+
+  alias Swarmshield.Gateway.AgentEvent
+
+  def valid_agent_event_attributes(attrs \\ %{}) do
+    Enum.into(attrs, %{
+      event_type: :action,
+      content: "Test agent event content",
+      payload: %{"key" => "value"},
+      severity: :info
+    })
+  end
+
+  @doc """
+  Creates an agent event with a registered agent and workspace.
+
+  Pass `workspace_id` and `registered_agent_id` in attrs to use existing records,
+  or they will be created automatically.
+  """
+  def agent_event_fixture(attrs \\ %{}) do
+    {workspace_id, attrs} =
+      case Map.pop(attrs, :workspace_id) do
+        {nil, rest} ->
+          workspace = workspace_fixture()
+          {workspace.id, rest}
+
+        {wid, rest} ->
+          {wid, rest}
+      end
+
+    {registered_agent_id, attrs} =
+      case Map.pop(attrs, :registered_agent_id) do
+        {nil, rest} ->
+          agent = registered_agent_fixture(%{workspace_id: workspace_id})
+          {agent.id, rest}
+
+        {aid, rest} ->
+          {aid, rest}
+      end
+
+    event_attrs = valid_agent_event_attributes(attrs)
+
+    {:ok, event} =
+      %AgentEvent{workspace_id: workspace_id, registered_agent_id: registered_agent_id}
+      |> AgentEvent.changeset(event_attrs)
+      |> Repo.insert()
+
+    event
+  end
 end
