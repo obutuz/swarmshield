@@ -92,6 +92,16 @@ defmodule Swarmshield.Authorization do
   end
 
   @doc """
+  Returns the cached permission set for a user in a workspace.
+  Returns a `MapSet` of permission keys, `:all` for super admin, or an empty `MapSet`.
+
+  Used by on_mount hooks to assign permissions to socket for handle_event checks.
+  """
+  def get_user_permissions(user_id, workspace_id) do
+    get_or_load_permissions(user_id, workspace_id)
+  end
+
+  @doc """
   Invalidates cached permissions for a specific user+workspace pair.
   Call this when a user's role assignment changes.
   """

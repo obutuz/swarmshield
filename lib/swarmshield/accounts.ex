@@ -339,6 +339,11 @@ defmodule Swarmshield.Accounts do
   end
 
   @doc """
+  Gets a single workspace by ID. Returns `nil` if not found.
+  """
+  def get_workspace(id), do: Repo.get(Workspace, id)
+
+  @doc """
   Gets a single workspace by ID. Raises `Ecto.NoResultsError` if not found.
   """
   def get_workspace!(id) do
