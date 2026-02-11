@@ -186,7 +186,7 @@
       "title": "Create AgentShowLive (agent detail + event history)",
       "description": "Agent detail view showing agent configuration, recent events, violation history.",
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "DASH-005"
       ],

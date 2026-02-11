@@ -535,6 +535,7 @@ defmodule Swarmshield.Policies do
     query
     |> maybe_filter_violation_rule(Keyword.get(opts, :policy_rule_id))
     |> maybe_filter_violation_event(Keyword.get(opts, :agent_event_id))
+    |> maybe_filter_violation_agent(Keyword.get(opts, :registered_agent_id))
     |> maybe_filter_violation_action(Keyword.get(opts, :action_taken))
     |> maybe_filter_violation_severity(Keyword.get(opts, :severity))
     |> maybe_filter_violation_resolved(Keyword.get(opts, :resolved))
@@ -551,6 +552,18 @@ defmodule Swarmshield.Policies do
 
   defp maybe_filter_violation_event(query, event_id),
     do: where(query, [v], v.agent_event_id == ^event_id)
+
+  defp maybe_filter_violation_agent(query, nil), do: query
+
+  defp maybe_filter_violation_agent(query, agent_id) do
+    agent_event_ids =
+      from(e in Swarmshield.Gateway.AgentEvent,
+        where: e.registered_agent_id == ^agent_id,
+        select: e.id
+      )
+
+    where(query, [v], v.agent_event_id in subquery(agent_event_ids))
+  end
 
   defp maybe_filter_violation_action(query, nil), do: query
 

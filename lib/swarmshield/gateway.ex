@@ -78,6 +78,38 @@ defmodule Swarmshield.Gateway do
   end
 
   @doc """
+  Gets a single registered agent by ID, scoped to a workspace.
+
+  Returns `nil` if not found or agent belongs to a different workspace.
+  """
+  def get_registered_agent_for_workspace(id, workspace_id)
+      when is_binary(id) and is_binary(workspace_id) do
+    RegisteredAgent
+    |> where([a], a.id == ^id and a.workspace_id == ^workspace_id)
+    |> Repo.one()
+  end
+
+  @doc """
+  Returns aggregate stats for a single agent using conditional aggregates.
+
+  Returns a map with:
+  - `:total_events` - total event count
+  - `:flagged_count` - events with status :flagged
+  - `:blocked_count` - events with status :blocked
+  """
+  def get_agent_stats(agent_id) when is_binary(agent_id) do
+    from(e in AgentEvent,
+      where: e.registered_agent_id == ^agent_id,
+      select: %{
+        total_events: count(e.id),
+        flagged_count: count(e.id) |> filter(e.status == :flagged),
+        blocked_count: count(e.id) |> filter(e.status == :blocked)
+      }
+    )
+    |> Repo.one()
+  end
+
+  @doc """
   Gets a registered agent by API key hash.
 
   Uses the unique index on `api_key_hash` for efficient lookup.
