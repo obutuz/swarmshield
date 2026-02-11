@@ -26,7 +26,7 @@
       "title": "Create ApiAuth plug",
       "description": "Plug that authenticates API requests using Bearer tokens. Extracts token from Authorization header, hashes it with SHA256, looks up the RegisteredAgent, and assigns the agent and workspace to the connection.",
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "dependsOn": [],
       "acceptanceCriteria": [
         "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",

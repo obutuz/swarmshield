@@ -149,6 +149,22 @@ defmodule Swarmshield.Gateway do
     end
   end
 
+  @doc """
+  Updates last_seen_at for a registered agent atomically.
+
+  Uses `Repo.update_all` to avoid read-modify-write race conditions.
+  Designed to be called from async contexts (e.g., Task.Supervisor)
+  so it does not block API response paths.
+  """
+  def touch_agent_last_seen(agent_id) when is_binary(agent_id) do
+    now = DateTime.utc_now(:second)
+
+    from(a in RegisteredAgent, where: a.id == ^agent_id)
+    |> Repo.update_all(set: [last_seen_at: now])
+
+    :ok
+  end
+
   # ---------------------------------------------------------------------------
   # AgentEvent
   # ---------------------------------------------------------------------------
