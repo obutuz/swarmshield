@@ -157,7 +157,7 @@
       "title": "Create AgentsLive (registered agent registry)",
       "description": "Registered agent registry showing all monitored AI agents with status, risk level, event counts.",
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "DASH-001"
       ],
