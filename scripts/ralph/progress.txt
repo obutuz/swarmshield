@@ -52,3 +52,4 @@ POLICY-007 DONE 2026-02-11 Blocklist/allowlist rule evaluation - 890 tests pass,
 POLICY-008 DONE 2026-02-11 Payload size rule evaluation - 890 tests pass, credo clean
 POLICY-009 DONE 2026-02-11 Composite rule evaluation - wire all evaluators into PolicyEngine - 899 tests pass, credo clean
 POLICY-010 DONE 2026-02-11 Seed default policy rules and detection rules (8 detection + 8 policy, idempotent) - 899 tests pass, credo clean
+POLICY-011 DONE 2026-02-11 Create ApiKeyCache GenServer with ETS - 912 tests pass, credo clean

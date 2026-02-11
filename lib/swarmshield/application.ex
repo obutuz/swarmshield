@@ -14,6 +14,7 @@ defmodule Swarmshield.Application do
       {Phoenix.PubSub, name: Swarmshield.PubSub},
       Swarmshield.Authorization.AuthCache,
       Swarmshield.Policies.PolicyCache,
+      Swarmshield.Gateway.ApiKeyCache,
       # Start to serve requests, typically the last entry
       SwarmshieldWeb.Endpoint
     ]

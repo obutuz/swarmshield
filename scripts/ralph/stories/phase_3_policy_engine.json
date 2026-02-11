@@ -340,7 +340,7 @@
       "title": "Create ApiKeyCache GenServer with ETS",
       "description": "ETS-cached API key -> RegisteredAgent lookup for sub-millisecond API authentication. At 20M users, every API request hitting the database for key validation is catastrophic. Caches the SHA256 hash -> {agent_id, workspace_id, status} mapping. PubSub-driven invalidation on agent status changes, suspension, key regeneration.",
       "priority": 11,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "POLICY-001"
       ],
