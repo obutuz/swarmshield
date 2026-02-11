@@ -81,3 +81,4 @@ DELIB-013 DONE 2026-02-11 Implement GhostProtocol wipe engine (crypto_shred, fie
 DELIB-014 DONE 2026-02-11 Implement GhostProtocol expiry enforcement (Process.send_after, auto_terminate_on_expiry, partial verdicts, force-terminate flow) - part of session tests, credo clean
 DASH-001 DONE 2026-02-11 App layout with sidebar navigation (header+sidebar+mobile bottom nav, pact_africa pattern, DaisyUI semantic classes, ghost-protocol routes+stubs, all LiveViews wired) - 1318 tests pass, credo clean
 DASH-002 DONE 2026-02-11 DashboardLive (real-time stats, PubSub counters, assign_async, GOD MODE UI with stat cards, 3 context stat functions, permission check) - 1327 tests pass, credo clean
+DASH-003 DONE 2026-02-11 EventsLive (streams, composable filters, content search ILIKE, pagination, PubSub prepend, status/type/severity badges, GOD MODE UI) - 1340 tests pass, credo clean

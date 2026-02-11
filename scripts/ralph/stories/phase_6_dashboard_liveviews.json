@@ -91,7 +91,7 @@
       "title": "Create EventsLive (stream, filters, search)",
       "description": "Event list view with real-time streaming, filtering by status/type/agent, and search.",
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "DASH-001"
       ],

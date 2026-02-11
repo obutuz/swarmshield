@@ -171,6 +171,19 @@ defmodule Swarmshield.Gateway do
     :ok
   end
 
+  @doc """
+  Returns a list of `{name, id}` tuples for all agents in a workspace.
+  Used for filter dropdowns in LiveViews. Lightweight: only selects id and name.
+  """
+  def list_agents_for_select(workspace_id) when is_binary(workspace_id) do
+    from(a in RegisteredAgent,
+      where: a.workspace_id == ^workspace_id,
+      select: {a.name, a.id},
+      order_by: [asc: a.name]
+    )
+    |> Repo.all()
+  end
+
   # ---------------------------------------------------------------------------
   # Dashboard Stats (single query with conditional aggregates)
   # ---------------------------------------------------------------------------
@@ -226,6 +239,7 @@ defmodule Swarmshield.Gateway do
     * `:event_type` - filter by event type atom
     * `:status` - filter by status atom
     * `:severity` - filter by severity atom
+    * `:search` - search content by text (case-insensitive ILIKE, sanitized)
     * `:from` - start datetime (inclusive)
     * `:to` - end datetime (inclusive)
     * `:page` - page number (default 1)
@@ -467,6 +481,7 @@ defmodule Swarmshield.Gateway do
     |> maybe_filter_event_type(Keyword.get(opts, :event_type))
     |> maybe_filter_event_status(Keyword.get(opts, :status))
     |> maybe_filter_event_severity(Keyword.get(opts, :severity))
+    |> maybe_filter_event_search(Keyword.get(opts, :search))
     |> maybe_filter_event_from(Keyword.get(opts, :from))
     |> maybe_filter_event_to(Keyword.get(opts, :to))
   end
@@ -490,6 +505,14 @@ defmodule Swarmshield.Gateway do
 
   defp maybe_filter_event_severity(query, severity),
     do: where(query, [e], e.severity == ^severity)
+
+  defp maybe_filter_event_search(query, nil), do: query
+  defp maybe_filter_event_search(query, ""), do: query
+
+  defp maybe_filter_event_search(query, search) when is_binary(search) do
+    sanitized = "%" <> String.replace(search, ["%", "_", "\\"], &"\\#{&1}") <> "%"
+    where(query, [e], ilike(e.content, ^sanitized))
+  end
 
   defp maybe_filter_event_from(query, nil), do: query
 

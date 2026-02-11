@@ -96,13 +96,32 @@ defmodule Swarmshield.GatewayFixtures do
           {aid, rest}
       end
 
+    # Extract server-side fields that aren't cast by the external changeset
+    {status, attrs} = Map.pop(attrs, :status)
+    {evaluation_result, attrs} = Map.pop(attrs, :evaluation_result)
+    {evaluated_at, attrs} = Map.pop(attrs, :evaluated_at)
+    {flagged_reason, attrs} = Map.pop(attrs, :flagged_reason)
+    {source_ip, attrs} = Map.pop(attrs, :source_ip)
+
     event_attrs = valid_agent_event_attributes(attrs)
+
+    server_fields =
+      %{}
+      |> maybe_put(:status, status)
+      |> maybe_put(:evaluation_result, evaluation_result)
+      |> maybe_put(:evaluated_at, evaluated_at)
+      |> maybe_put(:flagged_reason, flagged_reason)
+      |> maybe_put(:source_ip, source_ip)
 
     {:ok, event} =
       %AgentEvent{workspace_id: workspace_id, registered_agent_id: registered_agent_id}
       |> AgentEvent.changeset(event_attrs)
+      |> Ecto.Changeset.change(server_fields)
       |> Repo.insert()
 
     event
   end
+
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
 end
