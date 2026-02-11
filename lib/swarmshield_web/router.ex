@@ -98,6 +98,8 @@ defmodule SwarmshieldWeb.Router do
       live "/agents/:id", AgentShowLive, :show
       live "/deliberations", DeliberationsLive, :index
       live "/deliberations/:id", DeliberationShowLive, :show
+      live "/ghost-protocol", GhostProtocolLive, :index
+      live "/ghost-protocol/:id", GhostProtocolSessionLive, :show
       live "/audit", AuditLive, :index
     end
   end

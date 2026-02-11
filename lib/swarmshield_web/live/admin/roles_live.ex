@@ -10,11 +10,17 @@ defmodule SwarmshieldWeb.Admin.RolesLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope}>
+    <Layouts.app
+      flash={@flash}
+      current_scope={@current_scope}
+      current_workspace={@current_workspace}
+      user_permissions={@user_permissions}
+      active_nav={:admin_roles}
+    >
       <div class="space-y-6">
         <div>
-          <h1 class="text-3xl font-bold text-gray-100">Manage Roles</h1>
-          <p class="text-gray-400 mt-1">Role management coming soon.</p>
+          <h1 class="text-3xl font-bold">Manage Roles</h1>
+          <p class="text-base-content/60 mt-1">Role management coming soon.</p>
         </div>
       </div>
     </Layouts.app>

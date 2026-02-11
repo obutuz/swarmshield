@@ -172,6 +172,43 @@ defmodule Swarmshield.Gateway do
   end
 
   # ---------------------------------------------------------------------------
+  # Dashboard Stats (single query with conditional aggregates)
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Returns dashboard statistics for a workspace using conditional aggregates.
+
+  Executes TWO optimized queries (events + agents) instead of N+1:
+  1. Event stats: total_events_24h, flagged_events, blocked_events via FILTER
+  2. Agent stats: active_agents count
+
+  Returns a map with integer values. All counts default to 0.
+  """
+  def get_dashboard_stats(workspace_id) when is_binary(workspace_id) do
+    since = DateTime.add(DateTime.utc_now(:second), -24, :hour)
+
+    event_stats =
+      from(e in AgentEvent,
+        where: e.workspace_id == ^workspace_id,
+        select: %{
+          total_events_24h: count(e.id) |> filter(e.inserted_at >= ^since),
+          flagged_events: count(e.id) |> filter(e.status == :flagged and e.inserted_at >= ^since),
+          blocked_events: count(e.id) |> filter(e.status == :blocked and e.inserted_at >= ^since)
+        }
+      )
+      |> Repo.one()
+
+    active_agents =
+      from(a in RegisteredAgent,
+        where: a.workspace_id == ^workspace_id and a.status == :active,
+        select: count(a.id)
+      )
+      |> Repo.one()
+
+    Map.put(event_stats, :active_agents, active_agents || 0)
+  end
+
+  # ---------------------------------------------------------------------------
   # AgentEvent
   # ---------------------------------------------------------------------------
 

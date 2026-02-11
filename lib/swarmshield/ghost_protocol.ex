@@ -168,6 +168,48 @@ defmodule Swarmshield.GhostProtocol do
   # ---------------------------------------------------------------------------
   # Private
   # ---------------------------------------------------------------------------
+  # Dashboard Stats
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Returns GhostProtocol dashboard statistics for a workspace.
+
+  Uses JOINs through workflow -> ghost_protocol_config to identify
+  ephemeral sessions. Single query with conditional aggregates.
+
+  Returns a map with:
+  - active_ephemeral_sessions: sessions in active states linked to a ghost config
+  - total_sessions_wiped: completed ephemeral sessions
+  - active_configs: enabled ghost protocol configs
+  """
+  def get_dashboard_stats(workspace_id) when is_binary(workspace_id) do
+    active_statuses = [:pending, :analyzing, :deliberating, :voting]
+
+    session_stats =
+      from(s in AnalysisSession,
+        join: w in Workflow,
+        on: w.id == s.workflow_id,
+        where: s.workspace_id == ^workspace_id and not is_nil(w.ghost_protocol_config_id),
+        select: %{
+          active_ephemeral_sessions: count(s.id) |> filter(s.status in ^active_statuses),
+          total_sessions_wiped: count(s.id) |> filter(s.status == :completed)
+        }
+      )
+      |> Repo.one() || %{active_ephemeral_sessions: 0, total_sessions_wiped: 0}
+
+    active_configs =
+      from(c in Config,
+        where: c.workspace_id == ^workspace_id and c.enabled == true,
+        select: count(c.id)
+      )
+      |> Repo.one() || 0
+
+    Map.put(session_stats, :active_configs, active_configs)
+  end
+
+  # ---------------------------------------------------------------------------
+  # Private helpers
+  # ---------------------------------------------------------------------------
 
   defp audit_config_action(%Config{} = config, action, workspace_id) do
     config_id = config.id

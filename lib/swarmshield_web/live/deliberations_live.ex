@@ -10,11 +10,17 @@ defmodule SwarmshieldWeb.DeliberationsLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope}>
+    <Layouts.app
+      flash={@flash}
+      current_scope={@current_scope}
+      current_workspace={@current_workspace}
+      user_permissions={@user_permissions}
+      active_nav={:deliberations}
+    >
       <div class="space-y-6">
         <div>
-          <h1 class="text-3xl font-bold text-gray-100">Deliberations</h1>
-          <p class="text-gray-400 mt-1">Deliberation engine coming soon.</p>
+          <h1 class="text-3xl font-bold">Deliberations</h1>
+          <p class="text-base-content/60 mt-1">Deliberation engine coming soon.</p>
         </div>
       </div>
     </Layouts.app>

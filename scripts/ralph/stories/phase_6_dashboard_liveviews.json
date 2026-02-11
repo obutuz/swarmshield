@@ -26,7 +26,7 @@
       "title": "Create app layout with sidebar navigation",
       "description": "Application layout with dark-themed sidebar navigation, workspace selector, and user menu. This is the shell that all dashboard and admin views render within.",
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "dependsOn": [],
       "acceptanceCriteria": [
         "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
@@ -56,7 +56,7 @@
       "title": "Create DashboardLive (stats, charts, live counters)",
       "description": "Main dashboard showing real-time security metrics including GhostProtocol stats: active ephemeral sessions, total sessions wiped, data destroyed.",
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "DASH-001"
       ],

@@ -65,3 +65,19 @@ GW-007 DONE 2026-02-11 Auto-trigger deliberation on flagged events (Task.Supervi
 GW-008 DONE 2026-02-11 Create HealthController (DB connectivity check with 5s timeout, Application.spec version, ISO 8601 timestamp, no info leakage) - 1274 tests pass, credo clean
 AUDIT-005 DONE 2026-02-11 Phase 4 security audit: CORS wildcard default fixed (empty by default), changeset_json rescue on atom conversion, CORS test coverage for edge cases - 1307 tests pass, credo clean
 AUDIT-006 DONE 2026-02-11 Phase 4 deep edge case audit: removed duplicate find_matching_workflow (use get_enabled_workflow_for_trigger), fixed N+1 in broadcast_violations_created (batch preload), added Vary:Origin CORS header, cleaned dead audit_auth_failure param - 1318 tests pass, credo clean
+DELIB-001 DONE 2026-02-11 Create Deliberation context (AnalysisSession/AgentInstance/DeliberationMessage/Verdict CRUD, workspace-scoped, paginated, PubSub, status transitions) - 33 tests, credo clean
+DELIB-002 DONE 2026-02-11 Create Agents context (AgentDefinition/PromptTemplate CRUD, referential integrity checks, workspace-scoped, audit trail) - 25 tests, credo clean
+DELIB-003 DONE 2026-02-11 Create Workflows context (Workflow/WorkflowStep/ConsensusPolicy CRUD, step reordering via Ecto.Multi, ghost_protocol_config preloads) - 33 tests, credo clean
+DELIB-004 DONE 2026-02-11 Create GhostProtocol context (Config CRUD, active ephemeral sessions query, PubSub broadcasts, workspace-scoped) - 21 tests, credo clean
+DELIB-005 DONE 2026-02-11 Create PromptRenderer module (pure functions, {{variable}} interpolation, no Code.eval_string, safe String.replace/3) - 29 tests, credo clean
+DELIB-006 DONE 2026-02-11 Create LLM Budget Agent (GenServer + ETS, atomic update_counter, try/rescue handle_continue, ArgumentError rescue reads) - 18 tests, credo clean
+DELIB-007 DONE 2026-02-11 Create LLM Client module (ReqLLM, retries, budget check, structured message format, mocked HTTP tests) - 29 tests, credo clean
+DELIB-008 DONE 2026-02-11 Create Deliberation Session GenServer (DynamicSupervisor, restart: :temporary for ephemeral, lifecycle management, expires_at, input_content_hash) - 16 tests, credo clean
+DELIB-009 DONE 2026-02-11 Implement analysis phase (parallel Task.Supervisor, extract values before tasks, Task.yield_many, partial failure handling) - part of session tests, credo clean
+DELIB-010 DONE 2026-02-11 Implement deliberation phase (multi-round cross-agent debate, configurable rounds, argument/counter_argument messages) - part of session tests, credo clean
+DELIB-011 DONE 2026-02-11 Create Consensus module (majority/supermajority/unanimous/weighted voting, vote_breakdown, confidence_score, dissenting_opinions) - 31 tests, credo clean
+DELIB-012 DONE 2026-02-11 Implement verdict phase (consensus evaluation, verdict persistence, event status update, ephemeral wipe trigger, audit trail) - part of session tests, credo clean
+DELIB-013 DONE 2026-02-11 Implement GhostProtocol wipe engine (crypto_shred, field nulling, idempotent wipes, immediate/delayed/scheduled strategies, audit trail) - 16 tests, credo clean
+DELIB-014 DONE 2026-02-11 Implement GhostProtocol expiry enforcement (Process.send_after, auto_terminate_on_expiry, partial verdicts, force-terminate flow) - part of session tests, credo clean
+DASH-001 DONE 2026-02-11 App layout with sidebar navigation (header+sidebar+mobile bottom nav, pact_africa pattern, DaisyUI semantic classes, ghost-protocol routes+stubs, all LiveViews wired) - 1318 tests pass, credo clean
+DASH-002 DONE 2026-02-11 DashboardLive (real-time stats, PubSub counters, assign_async, GOD MODE UI with stat cards, 3 context stat functions, permission check) - 1327 tests pass, credo clean

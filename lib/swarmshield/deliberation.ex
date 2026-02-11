@@ -367,6 +367,39 @@ defmodule Swarmshield.Deliberation do
     |> maybe_filter_session_to(Keyword.get(opts, :to))
   end
 
+  # ---------------------------------------------------------------------------
+  # Dashboard Stats (conditional aggregates - single query)
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Returns deliberation dashboard statistics for a workspace.
+
+  Single query with conditional aggregates:
+  - active_deliberations: sessions in pending/analyzing/deliberating/voting
+  - verdicts_today: completed sessions with verdict from today
+
+  Returns a map with integer values.
+  """
+  def get_dashboard_stats(workspace_id) when is_binary(workspace_id) do
+    today_start = DateTime.utc_now(:second) |> DateTime.to_date() |> DateTime.new!(~T[00:00:00])
+
+    active_statuses = [:pending, :analyzing, :deliberating, :voting]
+
+    from(s in AnalysisSession,
+      where: s.workspace_id == ^workspace_id,
+      select: %{
+        active_deliberations: count(s.id) |> filter(s.status in ^active_statuses),
+        verdicts_today:
+          count(s.id) |> filter(s.status == :completed and s.completed_at >= ^today_start)
+      }
+    )
+    |> Repo.one()
+  end
+
+  # ---------------------------------------------------------------------------
+  # Private helpers
+  # ---------------------------------------------------------------------------
+
   defp maybe_filter_session_status(query, nil), do: query
   defp maybe_filter_session_status(query, status), do: where(query, [s], s.status == ^status)
 

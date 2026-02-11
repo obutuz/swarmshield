@@ -10,11 +10,17 @@ defmodule SwarmshieldWeb.Admin.SettingsLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope}>
+    <Layouts.app
+      flash={@flash}
+      current_scope={@current_scope}
+      current_workspace={@current_workspace}
+      user_permissions={@user_permissions}
+      active_nav={:admin_settings}
+    >
       <div class="space-y-6">
         <div>
-          <h1 class="text-3xl font-bold text-gray-100">Workspace Settings</h1>
-          <p class="text-gray-400 mt-1">Workspace configuration coming soon.</p>
+          <h1 class="text-3xl font-bold">Workspace Settings</h1>
+          <p class="text-base-content/60 mt-1">Workspace configuration coming soon.</p>
         </div>
       </div>
     </Layouts.app>
