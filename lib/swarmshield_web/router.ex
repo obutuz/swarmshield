@@ -17,24 +17,17 @@ defmodule SwarmshieldWeb.Router do
     plug :accepts, ["json"]
   end
 
+  ## Public routes (no auth required)
+
   scope "/", SwarmshieldWeb do
     pipe_through :browser
 
     get "/", PageController, :home
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", SwarmshieldWeb do
-  #   pipe_through :api
-  # end
+  ## Dev-only routes (LiveDashboard, Swoosh mailbox)
 
-  # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:swarmshield, :dev_routes) do
-    # If you want to use the LiveDashboard in production, you should put
-    # it behind authentication and allow only admins to access it.
-    # If your application does not have an admins-only section yet,
-    # you can use Plug.BasicAuth to set up some basic authentication
-    # as long as you are also using SSL (which you should anyway).
     import Phoenix.LiveDashboard.Router
 
     scope "/dev" do
@@ -45,20 +38,7 @@ defmodule SwarmshieldWeb.Router do
     end
   end
 
-  ## Authentication routes
-
-  scope "/", SwarmshieldWeb do
-    pipe_through [:browser, :require_authenticated_user]
-
-    live_session :require_authenticated_user,
-      on_mount: [{SwarmshieldWeb.UserAuth, :require_authenticated}] do
-      live "/users/settings", UserLive.Settings, :edit
-      live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email
-      live "/onboarding", OnboardingLive, :new
-    end
-
-    post "/users/update-password", UserSessionController, :update_password
-  end
+  ## Auth routes (login, register, confirm - public with optional scope)
 
   scope "/", SwarmshieldWeb do
     pipe_through [:browser]
@@ -72,5 +52,69 @@ defmodule SwarmshieldWeb.Router do
 
     post "/users/log-in", UserSessionController, :create
     delete "/users/log-out", UserSessionController, :delete
+  end
+
+  ## Authenticated routes (no workspace scope)
+  # User settings, onboarding, workspace selector
+
+  scope "/", SwarmshieldWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    live_session :require_authenticated_user,
+      on_mount: [{SwarmshieldWeb.UserAuth, :require_authenticated}] do
+      live "/users/settings", UserLive.Settings, :edit
+      live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email
+      live "/onboarding", OnboardingLive, :new
+      live "/select-workspace", WorkspaceSelectorLive, :index
+    end
+
+    post "/users/update-password", UserSessionController, :update_password
+  end
+
+  ## Workspace-authenticated routes
+  # All routes that require an active workspace in session.
+  # on_mount hooks ensure authentication AND load workspace context.
+
+  scope "/", SwarmshieldWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    live_session :workspace_authenticated,
+      on_mount: [
+        {SwarmshieldWeb.Hooks.AuthHooks, :ensure_authenticated},
+        {SwarmshieldWeb.Hooks.AuthHooks, :load_workspace}
+      ] do
+      live "/dashboard", DashboardLive, :index
+      live "/events", EventsLive, :index
+      live "/events/:id", EventShowLive, :show
+      live "/agents", AgentsLive, :index
+      live "/agents/:id", AgentShowLive, :show
+      live "/deliberations", DeliberationsLive, :index
+      live "/deliberations/:id", DeliberationShowLive, :show
+      live "/audit", AuditLive, :index
+    end
+  end
+
+  ## Workspace-admin routes
+  # Requires workspace context AND admin:access permission.
+
+  scope "/admin", SwarmshieldWeb.Admin do
+    pipe_through [:browser, :require_authenticated_user]
+
+    live_session :workspace_admin,
+      on_mount: [
+        {SwarmshieldWeb.Hooks.AuthHooks, :ensure_authenticated},
+        {SwarmshieldWeb.Hooks.AuthHooks, :load_workspace},
+        {SwarmshieldWeb.Hooks.AuthHooks, {:require_permission, "admin:access"}}
+      ] do
+      live "/settings", SettingsLive, :index
+      live "/roles", RolesLive, :index
+      live "/users", UsersLive, :index
+    end
+  end
+
+  ## API routes (placeholder for GW-002)
+
+  scope "/api/v1", SwarmshieldWeb.Api.V1 do
+    pipe_through :api
   end
 end

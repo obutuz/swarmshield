@@ -447,7 +447,7 @@
       "title": "Wire router.ex with live_session blocks and on_mount hooks",
       "description": "Define the complete router structure with proper live_session blocks. Public routes (landing, auth) have no workspace scope. Authenticated routes load workspace from session. Admin routes check admin permissions. This is the wiring that connects auth hooks to LiveViews.",
       "priority": 15,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "AUTH-011",
         "AUTH-013"

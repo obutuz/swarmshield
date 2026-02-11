@@ -34,7 +34,8 @@ permissions = [
   %{resource: "audit", action: "view", description: "View audit log"},
   %{resource: "audit", action: "export", description: "Export audit log"},
   %{resource: "settings", action: "view", description: "View settings"},
-  %{resource: "settings", action: "update", description: "Update settings"}
+  %{resource: "settings", action: "update", description: "Update settings"},
+  %{resource: "admin", action: "access", description: "Access admin panel"}
 ]
 
 now = DateTime.utc_now(:second)

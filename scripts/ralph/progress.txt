@@ -24,3 +24,4 @@ AUTH-010 DONE 2026-02-10 Seed default roles and permissions - 282 tests pass, cr
 AUTH-011 DONE 2026-02-10 Create workspace-scoped LiveView hooks - 303 tests pass, credo clean
 AUTH-013 DONE 2026-02-10 Post-login redirect and workspace resolution - 317 tests pass, credo clean
 AUTH-014 DONE 2026-02-10 Onboarding flow - create first workspace - 332 tests pass, credo clean
+AUTH-015 DONE 2026-02-10 Wire router.ex with live_session blocks and on_mount hooks - 357 tests pass, credo clean
