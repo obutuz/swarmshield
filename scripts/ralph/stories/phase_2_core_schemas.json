@@ -25,7 +25,7 @@
       "title": "Create RegisteredAgent schema",
       "description": "RegisteredAgent represents an external AI agent that SwarmShield monitors. Each agent has an API key for authentication and metadata about its capabilities and risk profile.",
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "dependsOn": [],
       "acceptanceCriteria": [
         "MANDATORY: Read progress.txt for existing implementations BEFORE coding - NO DUPLICATES",
