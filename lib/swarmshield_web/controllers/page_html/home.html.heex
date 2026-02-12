@@ -27,12 +27,18 @@
       <%!-- Desktop actions --%>
       <div class="hidden md:flex items-center gap-3">
         <Layouts.theme_toggle />
-        <a href={~p"/users/log-in"} class="btn btn-ghost btn-sm h-[36px] text-sm font-medium">
-          Log in
-        </a>
-        <a href={~p"/users/register"} class="btn btn-primary btn-sm h-[36px] text-sm font-medium">
-          Get Started
-        </a>
+        <%= if @current_scope do %>
+          <a href={~p"/dashboard"} class="btn btn-primary btn-sm h-[36px] text-sm font-medium">
+            Dashboard
+          </a>
+        <% else %>
+          <a href={~p"/users/log-in"} class="btn btn-ghost btn-sm h-[36px] text-sm font-medium">
+            Log in
+          </a>
+          <a href={~p"/users/register"} class="btn btn-primary btn-sm h-[36px] text-sm font-medium">
+            Get Started
+          </a>
+        <% end %>
       </div>
 
       <%!-- Mobile hamburger --%>
@@ -57,8 +63,12 @@
       <a href="#how-it-works" class="block text-sm font-medium text-base-content/70 hover:text-base-content py-2">How It Works</a>
       <a href="#pricing" class="block text-sm font-medium text-base-content/70 hover:text-base-content py-2">Pricing</a>
       <div class="pt-3 border-t-[0.5px] border-base-300 flex gap-3">
-        <a href={~p"/users/log-in"} class="btn btn-ghost btn-sm flex-1 h-[44px]">Log in</a>
-        <a href={~p"/users/register"} class="btn btn-primary btn-sm flex-1 h-[44px]">Get Started</a>
+        <%= if @current_scope do %>
+          <a href={~p"/dashboard"} class="btn btn-primary btn-sm flex-1 h-[44px]">Dashboard</a>
+        <% else %>
+          <a href={~p"/users/log-in"} class="btn btn-ghost btn-sm flex-1 h-[44px]">Log in</a>
+          <a href={~p"/users/register"} class="btn btn-primary btn-sm flex-1 h-[44px]">Get Started</a>
+        <% end %>
       </div>
     </div>
   </div>
@@ -89,10 +99,17 @@
         </p>
 
         <div class="mt-8 flex flex-col sm:flex-row gap-4">
-          <a href={~p"/users/register"} class="btn btn-primary h-[48px] px-8 text-base font-semibold">
-            Get Started Free
-            <.icon name="hero-arrow-right-mini" class="size-5 ml-1" />
-          </a>
+          <%= if @current_scope do %>
+            <a href={~p"/dashboard"} class="btn btn-primary h-[48px] px-8 text-base font-semibold">
+              Go to Dashboard
+              <.icon name="hero-arrow-right-mini" class="size-5 ml-1" />
+            </a>
+          <% else %>
+            <a href={~p"/users/register"} class="btn btn-primary h-[48px] px-8 text-base font-semibold">
+              Get Started Free
+              <.icon name="hero-arrow-right-mini" class="size-5 ml-1" />
+            </a>
+          <% end %>
           <a href="#how-it-works" class="btn btn-outline h-[48px] px-8 text-base font-semibold">
             See How It Works
           </a>
@@ -434,10 +451,17 @@
       Start for free, no credit card required.
     </p>
     <div class="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
-      <a href={~p"/users/register"} class="btn btn-primary h-[48px] px-10 text-base font-semibold">
-        Get Started Free
-        <.icon name="hero-arrow-right-mini" class="size-5 ml-1" />
-      </a>
+      <%= if @current_scope do %>
+        <a href={~p"/dashboard"} class="btn btn-primary h-[48px] px-10 text-base font-semibold">
+          Go to Dashboard
+          <.icon name="hero-arrow-right-mini" class="size-5 ml-1" />
+        </a>
+      <% else %>
+        <a href={~p"/users/register"} class="btn btn-primary h-[48px] px-10 text-base font-semibold">
+          Get Started Free
+          <.icon name="hero-arrow-right-mini" class="size-5 ml-1" />
+        </a>
+      <% end %>
     </div>
   </div>
 </section>
@@ -457,7 +481,11 @@
       <div class="flex items-center gap-6 text-sm text-base-content/50">
         <a href="#features" class="hover:text-base-content transition-colors">Features</a>
         <a href="#pricing" class="hover:text-base-content transition-colors">Pricing</a>
-        <a href={~p"/users/log-in"} class="hover:text-base-content transition-colors">Log in</a>
+        <%= if @current_scope do %>
+          <a href={~p"/dashboard"} class="hover:text-base-content transition-colors">Dashboard</a>
+        <% else %>
+          <a href={~p"/users/log-in"} class="hover:text-base-content transition-colors">Log in</a>
+        <% end %>
       </div>
       <p class="text-xs text-base-content/40">
         Built with Phoenix &amp; Claude
@@ -483,13 +511,20 @@
       <.icon name="hero-currency-dollar" class="size-5" />
       <span class="text-xs">Pricing</span>
     </a>
-    <a href={~p"/users/log-in"} class="flex flex-col items-center justify-center gap-1 text-base-content/60">
-      <.icon name="hero-arrow-right-on-rectangle" class="size-5" />
-      <span class="text-xs">Log in</span>
-    </a>
-    <a href={~p"/users/register"} class="flex flex-col items-center justify-center gap-1 text-primary">
-      <.icon name="hero-rocket-launch" class="size-5" />
-      <span class="text-xs font-semibold">Start</span>
-    </a>
+    <%= if @current_scope do %>
+      <a href={~p"/dashboard"} class="flex flex-col items-center justify-center gap-1 col-span-2 text-primary">
+        <.icon name="hero-squares-2x2" class="size-5" />
+        <span class="text-xs font-semibold">Dashboard</span>
+      </a>
+    <% else %>
+      <a href={~p"/users/log-in"} class="flex flex-col items-center justify-center gap-1 text-base-content/60">
+        <.icon name="hero-arrow-right-on-rectangle" class="size-5" />
+        <span class="text-xs">Log in</span>
+      </a>
+      <a href={~p"/users/register"} class="flex flex-col items-center justify-center gap-1 text-primary">
+        <.icon name="hero-rocket-launch" class="size-5" />
+        <span class="text-xs font-semibold">Start</span>
+      </a>
+    <% end %>
   </div>
 </nav>
