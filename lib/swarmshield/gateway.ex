@@ -714,21 +714,31 @@ defmodule Swarmshield.Gateway do
     _ -> :ok
   end
 
-  # Deliberation trigger - only for flagged events, async via Task.Supervisor
+  # Deliberation trigger - for flagged and blocked events, async via Task.Supervisor
 
   defp maybe_trigger_deliberation(_event, _workspace_id, :allow), do: :ok
-  defp maybe_trigger_deliberation(_event, _workspace_id, :block), do: :ok
 
   defp maybe_trigger_deliberation(event, workspace_id, :flag) do
+    spawn_deliberation_task(event, workspace_id, :flagged)
+  end
+
+  defp maybe_trigger_deliberation(event, workspace_id, :block) do
+    spawn_deliberation_task(event, workspace_id, :blocked)
+  end
+
+  defp spawn_deliberation_task(event, workspace_id, trigger_type) do
     event_id = event.id
 
     Task.Supervisor.start_child(
       Swarmshield.TaskSupervisor,
       fn ->
         try do
-          do_trigger_deliberation(event_id, workspace_id)
+          do_trigger_deliberation(event_id, workspace_id, trigger_type)
         catch
-          _kind, _reason -> :ok
+          kind, reason ->
+            Logger.warning(
+              "[Gateway] Deliberation trigger failed for event #{event_id}: #{inspect(kind)} #{inspect(reason)}"
+            )
         end
       end
     )
@@ -736,9 +746,13 @@ defmodule Swarmshield.Gateway do
     :ok
   end
 
-  defp do_trigger_deliberation(event_id, workspace_id) do
-    case Workflows.get_enabled_workflow_for_trigger(workspace_id, :flagged) do
+  defp do_trigger_deliberation(event_id, workspace_id, trigger_type) do
+    case Workflows.get_enabled_workflow_for_trigger(workspace_id, trigger_type) do
       nil ->
+        Logger.warning(
+          "[Gateway] No enabled workflow for :#{trigger_type} trigger in workspace #{workspace_id}"
+        )
+
         :ok
 
       workflow ->
@@ -770,7 +784,7 @@ defmodule Swarmshield.Gateway do
           metadata: %{
             "workflow_id" => workflow.id,
             "workflow_name" => workflow.name,
-            "trigger" => "flagged_event"
+            "trigger" => "#{trigger_type}_event"
           }
         })
     end

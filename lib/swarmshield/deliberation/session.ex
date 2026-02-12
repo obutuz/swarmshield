@@ -105,16 +105,26 @@ defmodule Swarmshield.Deliberation.Session do
 
   @impl true
   def handle_continue(:start_analysis, state) do
-    state = run_analysis_phase(state)
+    try do
+      state = run_analysis_phase(state)
 
-    case state.phase do
-      :failed ->
+      case state.phase do
+        :failed ->
+          {:stop, :normal, state}
+
+        :analyzing_complete ->
+          state = run_deliberation_phase(state)
+          state = run_verdict_phase(state)
+          maybe_wipe_and_stop(state)
+      end
+    catch
+      kind, reason ->
+        message = format_catch_message(kind, reason, __STACKTRACE__)
+
+        Logger.error("[Session] Unhandled #{kind} in session #{state.session_id}: #{message}")
+
+        state = fail_session(state, state.session, "Unhandled #{kind}: #{message}")
         {:stop, :normal, state}
-
-      :analyzing_complete ->
-        state = run_deliberation_phase(state)
-        state = run_verdict_phase(state)
-        maybe_wipe_and_stop(state)
     end
   end
 
@@ -138,7 +148,7 @@ defmodule Swarmshield.Deliberation.Session do
       ghost_config == nil ->
         {:noreply, state}
 
-      state.phase in [:completed, :failed, :timed_out, :wiping] ->
+      state.phase in [:completed, :failed, :timed_out, :wiping, :awaiting_wipe] ->
         {:noreply, state}
 
       expired?(state.session) and ghost_config.auto_terminate_on_expiry ->
@@ -197,35 +207,20 @@ defmodule Swarmshield.Deliberation.Session do
             started_at: DateTime.utc_now(:second)
           })
 
-        # Extract values BEFORE spawning task (no state copying)
-        instance_id = instance.id
-        session_id = session.id
-        system_prompt = render_system_prompt(agent_def, step)
-        user_content = event.content || ""
-        model = "anthropic:#{agent_def.model}"
-        temperature = agent_def.temperature || 0.3
-        max_tokens = agent_def.max_tokens || 4096
-        workspace_id = session.workspace_id
+        task_params = %{
+          instance_id: instance.id,
+          session_id: session.id,
+          system_prompt: render_system_prompt(agent_def, step),
+          user_content: event.content || "",
+          model: "anthropic:#{agent_def.model}",
+          temperature: agent_def.temperature || 0.3,
+          max_tokens: agent_def.max_tokens || 4096,
+          workspace_id: session.workspace_id,
+          agent_name: agent_def.name || "Agent",
+          backend: backend
+        }
 
-        task =
-          Task.Supervisor.async_nolink(
-            Swarmshield.TaskSupervisor,
-            fn ->
-              llm_opts =
-                [
-                  model: model,
-                  temperature: temperature,
-                  max_tokens: max_tokens,
-                  workspace_id: workspace_id
-                ]
-                |> maybe_add_backend(backend)
-
-              context = LLMClient.build_context(system_prompt, user_content)
-              result = LLMClient.chat(context, llm_opts)
-              {instance_id, session_id, result}
-            end
-          )
-
+        task = spawn_llm_task(task_params)
         {task, instance}
       end)
 
@@ -255,63 +250,57 @@ defmodule Swarmshield.Deliberation.Session do
     state
   end
 
-  defp process_analysis_result(instance, result, session_id) do
-    case result do
-      {:ok, {_instance_id, _session_id, {:ok, chat_result}}} ->
-        {vote, confidence} = parse_llm_vote(chat_result.text)
+  defp process_analysis_result(instance, {:ok, {_, _, {:ok, chat_result}}}, session_id) do
+    text = normalize_llm_text(chat_result.text)
+    {vote, confidence} = parse_llm_vote(text)
+    tokens = chat_result.input_tokens + chat_result.output_tokens
 
-        {:ok, updated} =
-          Deliberation.update_agent_instance(instance, %{
-            status: :completed,
-            completed_at: DateTime.utc_now(:second),
-            initial_assessment: chat_result.text,
-            vote: vote,
-            confidence: confidence,
-            tokens_used: chat_result.input_tokens + chat_result.output_tokens,
-            cost_cents: chat_result.cost_cents
-          })
+    {:ok, updated} =
+      Deliberation.update_agent_instance(instance, %{
+        status: :completed,
+        completed_at: DateTime.utc_now(:second),
+        initial_assessment: text,
+        vote: vote,
+        confidence: confidence,
+        tokens_used: tokens,
+        cost_cents: chat_result.cost_cents
+      })
 
-        Deliberation.create_deliberation_message(%{
-          analysis_session_id: session_id,
-          agent_instance_id: instance.id,
-          message_type: :analysis,
-          content: chat_result.text,
-          round: 1,
-          tokens_used: chat_result.input_tokens + chat_result.output_tokens
-        })
+    save_deliberation_message(instance.id, session_id, :analysis, text, 1, tokens)
+    updated
+  end
 
-        updated
+  defp process_analysis_result(instance, {:ok, {_, _, {:error, reason}}}, _session_id) do
+    {:ok, updated} =
+      Deliberation.update_agent_instance(instance, %{
+        status: :failed,
+        completed_at: DateTime.utc_now(:second),
+        error_message: reason |> inspect() |> String.slice(0, 10_000)
+      })
 
-      {:ok, {_instance_id, _session_id, {:error, reason}}} ->
-        {:ok, updated} =
-          Deliberation.update_agent_instance(instance, %{
-            status: :failed,
-            completed_at: DateTime.utc_now(:second),
-            error_message: inspect(reason)
-          })
+    updated
+  end
 
-        updated
+  defp process_analysis_result(instance, {:exit, reason}, _session_id) do
+    {:ok, updated} =
+      Deliberation.update_agent_instance(instance, %{
+        status: :failed,
+        completed_at: DateTime.utc_now(:second),
+        error_message: "Task exited: #{inspect(reason)}" |> String.slice(0, 10_000)
+      })
 
-      {:exit, reason} ->
-        {:ok, updated} =
-          Deliberation.update_agent_instance(instance, %{
-            status: :failed,
-            completed_at: DateTime.utc_now(:second),
-            error_message: "Task exited: #{inspect(reason)}"
-          })
+    updated
+  end
 
-        updated
+  defp process_analysis_result(instance, nil, _session_id) do
+    {:ok, updated} =
+      Deliberation.update_agent_instance(instance, %{
+        status: :timed_out,
+        completed_at: DateTime.utc_now(:second),
+        error_message: "Analysis timed out"
+      })
 
-      nil ->
-        {:ok, updated} =
-          Deliberation.update_agent_instance(instance, %{
-            status: :timed_out,
-            completed_at: DateTime.utc_now(:second),
-            error_message: "Analysis timed out"
-          })
-
-        updated
-    end
+    updated
   end
 
   # ---------------------------------------------------------------------------
@@ -353,49 +342,40 @@ defmodule Swarmshield.Deliberation.Session do
       previous_messages
       |> Enum.take(-max_context_messages)
       |> Enum.map_join("\n\n", fn msg ->
-        role = msg.agent_instance_id
-        "[Agent #{String.slice(role || "unknown", 0..7)}] (#{msg.message_type}): #{msg.content}"
+        agent_name =
+          case msg do
+            %{agent_instance: %{agent_definition: %{name: name}}} when is_binary(name) -> name
+            _ -> "Agent"
+          end
+
+        "[#{agent_name}] (#{msg.message_type}): #{msg.content}"
       end)
 
     # Preload all agent instances with definitions in a single query (avoid N+1)
     agent_ids = Enum.map(agents, & &1.id)
     preloaded_agents = Deliberation.list_agent_instances_by_ids(agent_ids)
 
+    user_content_base =
+      "Original event:\n#{event.content}\n\nPrevious discussion:\n#{debate_summary}\n\nProvide your response for round #{round}."
+
     tasks =
       Enum.map(preloaded_agents, fn agent ->
         agent_def = agent.agent_definition
 
-        instance_id = agent.id
-        session_id = session.id
-        system_prompt = build_deliberation_prompt(agent_def)
+        task_params = %{
+          instance_id: agent.id,
+          session_id: session.id,
+          system_prompt: build_deliberation_prompt(agent_def),
+          user_content: user_content_base,
+          model: "anthropic:#{agent_def.model}",
+          temperature: agent_def.temperature || 0.5,
+          max_tokens: agent_def.max_tokens || 4096,
+          workspace_id: session.workspace_id,
+          agent_name: agent_def.name || "Agent",
+          backend: backend
+        }
 
-        user_content =
-          "Original event:\n#{event.content}\n\nPrevious discussion:\n#{debate_summary}\n\nProvide your response for round #{round}."
-
-        model = "anthropic:#{agent_def.model}"
-        temperature = agent_def.temperature || 0.5
-        max_tokens = agent_def.max_tokens || 4096
-        workspace_id = session.workspace_id
-
-        task =
-          Task.Supervisor.async_nolink(
-            Swarmshield.TaskSupervisor,
-            fn ->
-              llm_opts =
-                [
-                  model: model,
-                  temperature: temperature,
-                  max_tokens: max_tokens,
-                  workspace_id: workspace_id
-                ]
-                |> maybe_add_backend(backend)
-
-              context = LLMClient.build_context(system_prompt, user_content)
-              result = LLMClient.chat(context, llm_opts)
-              {instance_id, session_id, result}
-            end
-          )
-
+        task = spawn_llm_task(task_params)
         {task, agent}
       end)
 
@@ -415,36 +395,29 @@ defmodule Swarmshield.Deliberation.Session do
     %{state | agents: merge_agents(state.agents, updated_agents)}
   end
 
-  defp process_deliberation_result(agent, result, session_id, round) do
-    case result do
-      {:ok, {_instance_id, _session_id, {:ok, chat_result}}} ->
-        {vote, confidence} = parse_llm_vote(chat_result.text)
+  defp process_deliberation_result(agent, {:ok, {_, _, {:ok, chat_result}}}, session_id, round) do
+    save_deliberation_result(agent, chat_result, session_id, round)
+  end
 
-        {:ok, updated} =
-          Deliberation.update_agent_instance(agent, %{
-            vote: vote || agent.vote,
-            confidence: confidence || agent.confidence,
-            tokens_used:
-              (agent.tokens_used || 0) + chat_result.input_tokens + chat_result.output_tokens,
-            cost_cents: (agent.cost_cents || 0) + chat_result.cost_cents
-          })
+  defp process_deliberation_result(agent, _other, _session_id, _round), do: agent
 
-        message_type = if round > 2, do: :counter_argument, else: :argument
+  defp save_deliberation_result(agent, chat_result, session_id, round) do
+    text = normalize_llm_text(chat_result.text)
+    {vote, confidence} = parse_llm_vote(text)
+    tokens = chat_result.input_tokens + chat_result.output_tokens
 
-        Deliberation.create_deliberation_message(%{
-          analysis_session_id: session_id,
-          agent_instance_id: agent.id,
-          message_type: message_type,
-          content: chat_result.text,
-          round: round,
-          tokens_used: chat_result.input_tokens + chat_result.output_tokens
-        })
+    {:ok, updated} =
+      Deliberation.update_agent_instance(agent, %{
+        vote: vote || agent.vote,
+        confidence: confidence || agent.confidence,
+        tokens_used: (agent.tokens_used || 0) + tokens,
+        cost_cents: (agent.cost_cents || 0) + chat_result.cost_cents
+      })
 
-        updated
+    message_type = if round > 2, do: :counter_argument, else: :argument
+    save_deliberation_message(agent.id, session_id, message_type, text, round, tokens)
 
-      _ ->
-        agent
-    end
+    updated
   end
 
   # ---------------------------------------------------------------------------
@@ -535,33 +508,29 @@ defmodule Swarmshield.Deliberation.Session do
       Logger.error("[Session] Wipe failed for #{session_id}: #{Exception.message(e)}")
   end
 
+  @terminal_db_statuses [:completed, :failed, :timed_out]
+
   defp force_terminate_expired(state) do
     %{session: session} = state
 
     Logger.warning("[Session] Force-terminating expired session #{session.id}")
 
-    agents = refresh_agents(session.id)
-    completed_agents = Enum.filter(agents, &(&1.status == :completed))
-
     state =
-      case completed_agents do
-        [] ->
-          state
-
-        _ ->
-          %{state | agents: agents}
-          |> run_verdict_phase()
+      if session.status in @terminal_db_statuses do
+        state
+      else
+        attempt_partial_verdict(state)
       end
 
     {:ok, session} =
-      if state.session.status != :completed do
+      if state.session.status in @terminal_db_statuses do
+        {:ok, state.session}
+      else
         Deliberation.update_analysis_session(state.session, %{
           status: :timed_out,
           completed_at: DateTime.utc_now(:second),
           error_message: "max_session_duration_exceeded"
         })
-      else
-        {:ok, state.session}
       end
 
     Accounts.create_audit_entry(%{
@@ -571,7 +540,7 @@ defmodule Swarmshield.Deliberation.Session do
       workspace_id: session.workspace_id,
       metadata: %{
         "reason" => "max_session_duration_exceeded",
-        "partial_verdict" => completed_agents != []
+        "partial_verdict" => state.session.status == :completed
       }
     })
 
@@ -703,6 +672,10 @@ defmodule Swarmshield.Deliberation.Session do
     agent_def.system_prompt || "You are a security analyst."
   end
 
+  defp render_system_prompt(agent_def, %{prompt_template: %Ecto.Association.NotLoaded{}}) do
+    agent_def.system_prompt || "You are a security analyst."
+  end
+
   defp render_system_prompt(agent_def, %{prompt_template: nil}) do
     agent_def.system_prompt || "You are a security analyst."
   end
@@ -815,12 +788,19 @@ defmodule Swarmshield.Deliberation.Session do
   defp build_reasoning(:consensus, decision, details) do
     "Consensus reached via #{Map.get(details, :strategy, "majority")} strategy. " <>
       "Decision: #{decision}. " <>
-      "Vote count: #{inspect(Map.get(details, :vote_breakdown, %{}))}."
+      "Vote count: #{format_vote_breakdown(Map.get(details, :vote_breakdown, %{}))}."
   end
 
   defp build_reasoning(:no_consensus, _decision, details) do
     "No consensus reached. Escalating for manual review. " <>
-      "Vote breakdown: #{inspect(Map.get(details, :vote_breakdown, %{}))}."
+      "Vote breakdown: #{format_vote_breakdown(Map.get(details, :vote_breakdown, %{}))}."
+  end
+
+  defp format_vote_breakdown(breakdown) when map_size(breakdown) == 0, do: "none"
+
+  defp format_vote_breakdown(breakdown) do
+    breakdown
+    |> Enum.map_join(", ", fn {vote, count} -> "#{vote}: #{count}" end)
   end
 
   defp stringify_keys(map) when is_map(map) do
@@ -841,14 +821,25 @@ defmodule Swarmshield.Deliberation.Session do
   end
 
   defp fail_session(state, session, error_message) do
-    {:ok, session} =
-      Deliberation.update_analysis_session(session, %{
-        status: :failed,
-        completed_at: DateTime.utc_now(:second),
-        error_message: error_message
-      })
+    case Deliberation.update_analysis_session(session, %{
+           status: :failed,
+           completed_at: DateTime.utc_now(:second),
+           error_message: String.slice(error_message, 0, 10_000)
+         }) do
+      {:ok, session} ->
+        %{state | session: session, phase: :failed}
 
-    %{state | session: session, phase: :failed}
+      {:error, _changeset} ->
+        Logger.error("[Session] Could not mark session #{session.id} as failed")
+        %{state | phase: :failed}
+    end
+  catch
+    kind, reason ->
+      Logger.error(
+        "[Session] #{kind} marking session #{session.id} as failed: #{format_catch_message(kind, reason, __STACKTRACE__)}"
+      )
+
+      %{state | phase: :failed}
   end
 
   defp audit_verdict(session, verdict) do
@@ -926,4 +917,96 @@ defmodule Swarmshield.Deliberation.Session do
 
   defp maybe_add_backend(opts, nil), do: opts
   defp maybe_add_backend(opts, backend), do: Keyword.put(opts, :backend, backend)
+
+  defp spawn_llm_task(params) do
+    %{
+      instance_id: instance_id,
+      session_id: session_id,
+      system_prompt: system_prompt,
+      user_content: user_content,
+      model: model,
+      temperature: temperature,
+      max_tokens: max_tokens,
+      workspace_id: workspace_id,
+      agent_name: agent_name,
+      backend: backend
+    } = params
+
+    Task.Supervisor.async_nolink(
+      Swarmshield.TaskSupervisor,
+      fn ->
+        llm_opts =
+          [
+            model: model,
+            temperature: temperature,
+            max_tokens: max_tokens,
+            workspace_id: workspace_id
+          ]
+          |> maybe_add_backend(backend)
+
+        context = LLMClient.build_context(system_prompt, user_content)
+        topic = "deliberation:#{session_id}"
+
+        broadcast_streaming(topic, {:agent_streaming_start, instance_id, agent_name})
+
+        on_chunk = fn chunk ->
+          broadcast_streaming(topic, {:agent_chunk, instance_id, chunk})
+        end
+
+        result = LLMClient.stream_chat(context, llm_opts, on_chunk)
+        broadcast_streaming(topic, {:agent_streaming_done, instance_id})
+
+        {instance_id, session_id, result}
+      end
+    )
+  end
+
+  defp normalize_llm_text(nil), do: "[No response from agent]"
+  defp normalize_llm_text(""), do: "[Empty response from agent]"
+  defp normalize_llm_text(text) when is_binary(text), do: text
+
+  defp save_deliberation_message(instance_id, session_id, message_type, content, round, tokens) do
+    case Deliberation.create_deliberation_message(%{
+           analysis_session_id: session_id,
+           agent_instance_id: instance_id,
+           message_type: message_type,
+           content: content,
+           round: round,
+           tokens_used: tokens
+         }) do
+      {:ok, _msg} ->
+        :ok
+
+      {:error, changeset} ->
+        Logger.error(
+          "[Session] Failed to create #{message_type} message for #{instance_id} round #{round}: #{inspect(changeset.errors)}"
+        )
+    end
+  end
+
+  defp attempt_partial_verdict(state) do
+    agents = refresh_agents(state.session.id)
+    completed_agents = Enum.filter(agents, &(&1.status == :completed))
+
+    case completed_agents do
+      [] -> state
+      _ -> %{state | agents: agents} |> run_verdict_phase()
+    end
+  end
+
+  defp broadcast_streaming(topic, message) do
+    Phoenix.PubSub.broadcast(Swarmshield.PubSub, topic, message)
+  end
+
+  defp format_catch_message(:error, %{__exception__: true} = exception, _stacktrace) do
+    Exception.message(exception)
+  end
+
+  defp format_catch_message(:exit, reason, _stacktrace) do
+    inspect(reason)
+  end
+
+  defp format_catch_message(kind, reason, _stacktrace) do
+    "#{kind}: #{inspect(reason)}"
+  end
 end

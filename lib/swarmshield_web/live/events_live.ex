@@ -23,7 +23,11 @@ defmodule SwarmshieldWeb.EventsLive do
     {:ok,
      socket
      |> assign(:page_title, "Events")
-     |> assign(:page_size, @page_size)}
+     |> assign(:page_size, @page_size)
+     |> assign(:show_simulate, false)
+     |> assign(:simulate_form, to_form(default_simulate_params(), as: "simulate"))
+     |> assign(:demo_scenarios, [])
+     |> assign(:demo_agent_id, nil)}
   end
 
   @impl true
@@ -75,6 +79,59 @@ defmodule SwarmshieldWeb.EventsLive do
   end
 
   # -------------------------------------------------------------------
+  # Events: simulate panel
+  # -------------------------------------------------------------------
+
+  def handle_event("toggle_simulate", _params, socket) do
+    {:noreply, assign(socket, :show_simulate, !socket.assigns.show_simulate)}
+  end
+
+  def handle_event("select_scenario", %{"id" => scenario_id}, socket) do
+    case Enum.find(socket.assigns.demo_scenarios, &(&1["id"] == scenario_id)) do
+      nil ->
+        {:noreply, socket}
+
+      scenario ->
+        form =
+          to_form(
+            %{
+              "event_type" => scenario["event_type"],
+              "severity" => scenario["severity"],
+              "content" => scenario["content"]
+            },
+            as: "simulate"
+          )
+
+        {:noreply, assign(socket, :simulate_form, form)}
+    end
+  end
+
+  def handle_event("send_simulate", %{"simulate" => params}, socket) do
+    workspace_id = socket.assigns.current_workspace.id
+    demo_agent_id = socket.assigns.demo_agent_id
+
+    attrs = %{
+      event_type: params["event_type"],
+      content: params["content"],
+      severity: params["severity"]
+    }
+
+    case Gateway.create_agent_event(workspace_id, demo_agent_id, attrs, source_ip: "demo-ui") do
+      {:ok, event} ->
+        {:ok, evaluated} = Gateway.evaluate_event(event, workspace_id)
+        {flash_kind, msg} = simulate_flash(evaluated.status)
+
+        {:noreply,
+         socket
+         |> put_flash(flash_kind, msg)
+         |> assign(:simulate_form, to_form(default_simulate_params(), as: "simulate"))}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Validation failed — content is required.")}
+    end
+  end
+
+  # -------------------------------------------------------------------
   # PubSub: real-time new events
   # -------------------------------------------------------------------
 
@@ -115,6 +172,15 @@ defmodule SwarmshieldWeb.EventsLive do
     {events, total_count} = Gateway.list_agent_events(workspace_id, query_opts)
     agents_for_select = Gateway.list_agents_for_select(workspace_id)
 
+    demo_agent_id =
+      case agents_for_select do
+        [{_name, id} | _] -> id
+        [] -> nil
+      end
+
+    demo_scenarios =
+      socket.assigns.current_workspace.settings["demo_scenarios"] || []
+
     # Keep raw filter params for URL reconstruction
     filter_params =
       params
@@ -128,6 +194,8 @@ defmodule SwarmshieldWeb.EventsLive do
     |> assign(:has_more?, total_count > page * @page_size)
     |> assign(:filter_params, filter_params)
     |> assign(:agents_for_select, agents_for_select)
+    |> assign(:demo_agent_id, demo_agent_id)
+    |> assign(:demo_scenarios, demo_scenarios)
     |> assign(:active_status, params["status"])
     |> assign(:active_event_type, params["event_type"])
     |> assign(:active_agent, params["agent"])
@@ -221,10 +289,145 @@ defmodule SwarmshieldWeb.EventsLive do
               events in {@current_workspace.name}
             </p>
           </div>
-          <div class="flex items-center gap-2">
-            <div class="size-2 rounded-full bg-success animate-pulse" />
-            <span class="text-xs text-base-content/40">Live</span>
+          <div class="flex items-center gap-3">
+            <button phx-click="toggle_simulate" class="btn btn-sm btn-primary gap-1.5">
+              <.icon name="hero-bolt" class="size-4" /> Simulate Event
+            </button>
+            <div class="flex items-center gap-2">
+              <div class="size-2 rounded-full bg-success animate-pulse" />
+              <span class="text-xs text-base-content/40">Live</span>
+            </div>
           </div>
+        </div>
+
+        <%!-- Simulate Event Panel --%>
+        <div
+          :if={@show_simulate}
+          id="simulate-panel"
+          class="rounded-xl border border-primary/20 bg-base-100 p-5 space-y-4"
+        >
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <.icon name="hero-beaker" class="size-5 text-primary" />
+              <h3 class="font-semibold text-sm">Simulate Agent Event</h3>
+            </div>
+            <span class="text-xs text-base-content/40">
+              Submits a real event through the full pipeline
+            </span>
+          </div>
+
+          <div :if={@demo_agent_id == nil} class="alert alert-warning">
+            <.icon name="hero-exclamation-triangle" class="size-5" />
+            <span>
+              No registered agents found.
+              <.link navigate={~p"/admin/registered-agents"} class="link link-primary">
+                Register an agent
+              </.link>
+              first.
+            </span>
+          </div>
+
+          <.form
+            :if={@demo_agent_id}
+            for={@simulate_form}
+            phx-submit="send_simulate"
+            id="simulate-form"
+            class="space-y-4"
+          >
+            <div :if={@demo_scenarios != []} class="space-y-1.5">
+              <span class="text-xs font-medium text-base-content/50">Quick Scenarios</span>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  :for={scenario <- @demo_scenarios}
+                  type="button"
+                  phx-click="select_scenario"
+                  phx-value-id={scenario["id"]}
+                  class="btn btn-xs btn-outline btn-primary"
+                >
+                  {scenario["label"]}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label class="text-xs font-medium text-base-content/50 mb-1 block">
+                Event Content
+              </label>
+              <textarea
+                name="simulate[content]"
+                rows="3"
+                class="textarea textarea-bordered w-full text-sm"
+                placeholder="Enter event content to evaluate against policy rules..."
+              >{@simulate_form[:content].value}</textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs font-medium text-base-content/50 mb-1 block">
+                  Event Type
+                </label>
+                <select
+                  name="simulate[event_type]"
+                  class="select select-bordered select-sm w-full"
+                >
+                  <option
+                    value="message"
+                    selected={@simulate_form[:event_type].value == "message"}
+                  >
+                    Message
+                  </option>
+                  <option
+                    value="tool_call"
+                    selected={@simulate_form[:event_type].value == "tool_call"}
+                  >
+                    Tool Call
+                  </option>
+                  <option
+                    value="action"
+                    selected={@simulate_form[:event_type].value == "action"}
+                  >
+                    Action
+                  </option>
+                  <option
+                    value="output"
+                    selected={@simulate_form[:event_type].value == "output"}
+                  >
+                    Output
+                  </option>
+                </select>
+              </div>
+
+              <div>
+                <label class="text-xs font-medium text-base-content/50 mb-1 block">
+                  Severity
+                </label>
+                <select name="simulate[severity]" class="select select-bordered select-sm w-full">
+                  <option
+                    value="critical"
+                    selected={@simulate_form[:severity].value == "critical"}
+                  >
+                    Critical
+                  </option>
+                  <option value="error" selected={@simulate_form[:severity].value == "error"}>
+                    Error
+                  </option>
+                  <option
+                    value="warning"
+                    selected={@simulate_form[:severity].value == "warning"}
+                  >
+                    Warning
+                  </option>
+                  <option value="info" selected={@simulate_form[:severity].value == "info"}>
+                    Info
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-sm gap-1.5">
+              <.icon name="hero-paper-airplane" class="size-4" /> Send Event
+            </button>
+          </.form>
         </div>
 
         <%!-- Filter Bar --%>
@@ -490,6 +693,15 @@ defmodule SwarmshieldWeb.EventsLive do
   # -------------------------------------------------------------------
   # Helpers
   # -------------------------------------------------------------------
+
+  defp default_simulate_params do
+    %{"event_type" => "message", "severity" => "warning", "content" => ""}
+  end
+
+  defp simulate_flash(:allowed), do: {:info, "Event submitted — Status: allowed"}
+  defp simulate_flash(:flagged), do: {:warning, "Event submitted — Status: flagged"}
+  defp simulate_flash(:blocked), do: {:error, "Event submitted — Status: blocked"}
+  defp simulate_flash(status), do: {:info, "Event submitted — Status: #{status}"}
 
   defp agent_name(%{registered_agent: %{name: name}}) when is_binary(name), do: name
   defp agent_name(_event), do: "Unknown"

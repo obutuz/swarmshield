@@ -57,15 +57,28 @@ defmodule SwarmshieldWeb.DeliberationsLive do
   end
 
   @impl true
-  def handle_info({:session_created, session}, socket) do
-    {:noreply,
-     socket
-     |> stream_insert(:sessions, session, at: 0)
-     |> assign(:total_count, socket.assigns.total_count + 1)}
+  def handle_info({:session_created, session_id, _status}, socket) do
+    workspace_id = socket.assigns.current_workspace.id
+
+    case Deliberation.get_session_for_list(session_id, workspace_id) do
+      nil ->
+        {:noreply, socket}
+
+      session ->
+        {:noreply,
+         socket
+         |> stream_insert(:sessions, session, at: 0)
+         |> assign(:total_count, socket.assigns.total_count + 1)}
+    end
   end
 
-  def handle_info({:session_updated, session}, socket) do
-    {:noreply, stream_insert(socket, :sessions, session)}
+  def handle_info({:session_updated, session_id, _status}, socket) do
+    workspace_id = socket.assigns.current_workspace.id
+
+    case Deliberation.get_session_for_list(session_id, workspace_id) do
+      nil -> {:noreply, socket}
+      session -> {:noreply, stream_insert(socket, :sessions, session)}
+    end
   end
 
   def handle_info(_msg, socket), do: {:noreply, socket}
@@ -153,6 +166,10 @@ defmodule SwarmshieldWeb.DeliberationsLive do
             <p class="text-sm text-base-content/50 mt-1">
               <span class="tabular-nums font-medium">{@total_count}</span> sessions
             </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="size-2 rounded-full bg-success animate-pulse" />
+            <span class="text-xs text-base-content/40">Live</span>
           </div>
         </div>
 

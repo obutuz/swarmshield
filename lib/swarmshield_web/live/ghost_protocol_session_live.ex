@@ -33,28 +33,29 @@ defmodule SwarmshieldWeb.GhostProtocolSessionLive do
   end
 
   @impl true
+  def handle_info({:session_updated, _session_id, new_status}, socket)
+      when new_status in [:completed, :failed, :timed_out] do
+    {:noreply, reload_session(socket)}
+  end
+
   def handle_info({:session_updated, _session_id, new_status}, socket) do
     {:noreply, assign(socket, :session, %{socket.assigns.session | status: new_status})}
   end
 
-  def handle_info({:session_created, _session_id, new_status}, socket) do
-    {:noreply, assign(socket, :session, %{socket.assigns.session | status: new_status})}
+  def handle_info({:session_created, _session_id, _new_status}, socket) do
+    {:noreply, reload_session(socket)}
   end
 
   def handle_info({:verdict_reached, _verdict_id, _decision}, socket) do
-    session_id = socket.assigns.session.id
-    verdict = Deliberation.get_verdict_by_session(session_id)
-    {:noreply, assign(socket, :session, %{socket.assigns.session | verdict: verdict})}
+    {:noreply, reload_session(socket)}
   end
 
   def handle_info({:wipe_completed, _session_id}, socket) do
-    session_id = socket.assigns.session.id
-    workspace_id = socket.assigns.current_workspace.id
-    {:noreply, load_session(socket, session_id, workspace_id)}
+    {:noreply, reload_session(socket)}
   end
 
   def handle_info({:message_created, _message_id, _type}, socket) do
-    {:noreply, socket}
+    {:noreply, reload_session(socket)}
   end
 
   def handle_info(_msg, socket), do: {:noreply, socket}
@@ -62,6 +63,16 @@ defmodule SwarmshieldWeb.GhostProtocolSessionLive do
   # -------------------------------------------------------------------
   # Private
   # -------------------------------------------------------------------
+
+  defp reload_session(socket) do
+    session_id = socket.assigns.session.id
+    ws_id = socket.assigns.current_workspace.id
+
+    case Deliberation.get_full_session_for_workspace(session_id, ws_id) do
+      nil -> socket
+      session -> apply_session_assigns(socket, session)
+    end
+  end
 
   defp load_session(socket, id, workspace_id \\ nil) do
     ws_id = workspace_id || socket.assigns.current_workspace.id
@@ -93,12 +104,17 @@ defmodule SwarmshieldWeb.GhostProtocolSessionLive do
       GhostProtocol.subscribe_to_session(session.id)
     end
 
+    socket
+    |> apply_session_assigns(session)
+    |> assign(:lifecycle_phases, @lifecycle_phases)
+  end
+
+  defp apply_session_assigns(socket, session) do
     config = session.workflow.ghost_protocol_config
 
     socket
     |> assign(:session, session)
     |> assign(:config, config)
-    |> assign(:lifecycle_phases, @lifecycle_phases)
   end
 
   # -------------------------------------------------------------------

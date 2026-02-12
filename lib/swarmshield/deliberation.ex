@@ -94,6 +94,21 @@ defmodule Swarmshield.Deliberation do
   end
 
   @doc """
+  Gets a session with list-view preloads, scoped to workspace.
+  Returns nil if not found. Used by PubSub handlers in DeliberationsLive.
+  """
+  def get_session_for_list(id, workspace_id)
+      when is_binary(id) and is_binary(workspace_id) do
+    AnalysisSession
+    |> where([s], s.id == ^id and s.workspace_id == ^workspace_id)
+    |> Repo.one()
+    |> case do
+      nil -> nil
+      session -> Repo.preload(session, [:verdict, workflow: :ghost_protocol_config])
+    end
+  end
+
+  @doc """
   Gets the analysis session linked to an agent event, if any.
   Returns nil if no session is linked. Preloads verdict and workflow.
   """
@@ -226,7 +241,7 @@ defmodule Swarmshield.Deliberation do
   def list_messages_by_session(session_id) when is_binary(session_id) do
     from(m in DeliberationMessage,
       where: m.analysis_session_id == ^session_id,
-      preload: [:agent_instance],
+      preload: [agent_instance: :agent_definition],
       order_by: [asc: m.round, asc: m.inserted_at]
     )
     |> Repo.all()

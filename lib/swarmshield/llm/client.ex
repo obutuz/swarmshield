@@ -70,6 +70,27 @@ defmodule Swarmshield.LLM.Client do
     end
   end
 
+  @spec stream_chat(ReqLLM.Context.t() | String.t(), chat_opts(), (String.t() -> any())) ::
+          {:ok, chat_result()} | {:error, atom() | {atom(), term()}}
+  def stream_chat(messages, opts \\ [], on_chunk) do
+    opts = maybe_resolve_workspace_key(opts)
+    model_spec = Keyword.get(opts, :model, @default_model)
+    workspace_id = Keyword.get(opts, :workspace_id)
+
+    with :ok <- verify_api_key(opts),
+         :ok <- reserve_workspace_budget(workspace_id, opts) do
+      case do_stream_call(messages, opts, model_spec, on_chunk) do
+        {:ok, result} ->
+          settle_workspace_budget(workspace_id, result, opts)
+          {:ok, result}
+
+        {:error, _} = error ->
+          release_workspace_budget(workspace_id, opts)
+          error
+      end
+    end
+  end
+
   @spec build_context(String.t(), String.t()) :: ReqLLM.Context.t()
   def build_context(system_prompt, user_content) do
     ReqLLM.Context.new([
@@ -221,6 +242,86 @@ defmodule Swarmshield.LLM.Client do
       model: model_to_string(model_spec),
       finish_reason: Map.get(response, :finish_reason, :stop)
     }
+  end
+
+  # ---------------------------------------------------------------------------
+  # Private - Streaming
+  # ---------------------------------------------------------------------------
+
+  defp do_stream_call(messages, opts, model_spec, on_chunk) do
+    if Keyword.has_key?(opts, :backend) do
+      # Test mode: use backend directly, simulate single chunk delivery
+      case do_call(messages, opts, model_spec) do
+        {:ok, result} ->
+          on_chunk.(result.text)
+          {:ok, result}
+
+        error ->
+          error
+      end
+    else
+      do_real_stream(messages, opts, model_spec, on_chunk)
+    end
+  end
+
+  defp do_real_stream(messages, opts, model_spec, on_chunk) do
+    call_opts =
+      [
+        temperature: Keyword.get(opts, :temperature, @default_temperature),
+        max_tokens: Keyword.get(opts, :max_tokens, @default_max_tokens),
+        timeout: Keyword.get(opts, :timeout, @default_timeout)
+      ]
+      |> maybe_add_system_prompt(opts)
+      |> maybe_add_api_key(opts)
+
+    case ReqLLM.stream_text(model_spec, messages, call_opts) do
+      {:ok, stream_response} ->
+        # Single-pass: call on_chunk AND accumulate full text
+        # Stream is lazy — can only be consumed once
+        full_text =
+          stream_response
+          |> ReqLLM.StreamResponse.tokens()
+          |> Enum.reduce("", fn token, acc ->
+            on_chunk.(token)
+            acc <> token
+          end)
+
+        # Metadata is collected concurrently via metadata_handle (not the stream)
+        usage = ReqLLM.StreamResponse.usage(stream_response) || %{}
+        finish_reason = ReqLLM.StreamResponse.finish_reason(stream_response) || :stop
+
+        input_tokens = Map.get(usage, :input_tokens, 0)
+        output_tokens = Map.get(usage, :output_tokens, 0)
+        total_cost = Map.get(usage, :total_cost, 0.0)
+
+        {:ok,
+         %{
+           text: full_text,
+           input_tokens: input_tokens,
+           output_tokens: output_tokens,
+           cost_cents: dollars_to_cents(total_cost),
+           model: model_to_string(model_spec),
+           finish_reason: finish_reason
+         }}
+
+      {:error, reason} ->
+        Logger.warning(
+          "[LLM.Client] Stream failed, falling back to non-streaming: #{inspect(reason)}"
+        )
+
+        case execute_with_retry(messages, opts, model_spec, 0) do
+          {:ok, result} ->
+            on_chunk.(result.text)
+            {:ok, result}
+
+          error ->
+            error
+        end
+    end
+  rescue
+    e ->
+      Logger.error("[LLM.Client] Stream error: #{Exception.message(e)}")
+      {:error, {:stream_error, Exception.message(e)}}
   end
 
   # ---------------------------------------------------------------------------

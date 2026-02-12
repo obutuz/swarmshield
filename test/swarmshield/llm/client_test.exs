@@ -529,6 +529,91 @@ defmodule Swarmshield.LLM.ClientTest do
   end
 
   # ---------------------------------------------------------------------------
+  # stream_chat/3
+  # ---------------------------------------------------------------------------
+
+  describe "stream_chat/3" do
+    test "calls on_chunk callback and returns chat_result", %{table: table} do
+      chunks_ref = :counters.new(1, [:atomics])
+      received_text = Agent.start_link(fn -> "" end) |> elem(1)
+
+      on_chunk = fn chunk ->
+        :counters.add(chunks_ref, 1, 1)
+        Agent.update(received_text, fn text -> text <> chunk end)
+      end
+
+      opts = base_opts(table) ++ [backend: success_backend("Streaming response")]
+
+      assert {:ok, result} = Client.stream_chat("analyze this", opts, on_chunk)
+
+      assert result.text == "Streaming response"
+      assert result.input_tokens == 100
+      assert result.output_tokens == 50
+
+      # Backend mode delivers full text as single chunk
+      assert :counters.get(chunks_ref, 1) == 1
+      assert Agent.get(received_text, & &1) == "Streaming response"
+
+      Agent.stop(received_text)
+    end
+
+    test "tracks budget like chat/2", %{table: table} do
+      workspace_id = Ecto.UUID.generate()
+      usage = %{input_tokens: 200, output_tokens: 100, total_cost: 0.05}
+
+      on_chunk = fn _chunk -> :ok end
+
+      opts =
+        base_opts(table) ++
+          [backend: success_backend("ok", usage), workspace_id: workspace_id]
+
+      assert {:ok, _} = Client.stream_chat("test", opts, on_chunk)
+
+      budget_usage = Budget.get_usage(workspace_id, table: table)
+      assert budget_usage.total_tokens == 300
+      assert budget_usage.total_cost_cents == 5
+    end
+
+    test "returns error when backend fails", %{table: table} do
+      error_backend = fn _model, _messages, _opts ->
+        {:error, :timeout}
+      end
+
+      on_chunk = fn _chunk -> :ok end
+
+      opts = base_opts(table) ++ [backend: error_backend]
+      assert {:error, :timeout} = Client.stream_chat("test", opts, on_chunk)
+    end
+
+    test "does not call on_chunk when backend fails", %{table: table} do
+      chunk_counter = :counters.new(1, [:atomics])
+
+      error_backend = fn _model, _messages, _opts ->
+        {:error, :api_key_not_configured}
+      end
+
+      on_chunk = fn _chunk ->
+        :counters.add(chunk_counter, 1, 1)
+      end
+
+      opts = base_opts(table) ++ [backend: error_backend]
+      Client.stream_chat("test", opts, on_chunk)
+
+      assert :counters.get(chunk_counter, 1) == 0
+    end
+
+    test "checks budget before streaming", %{table: table} do
+      workspace_id = Ecto.UUID.generate()
+      Budget.track_usage(workspace_id, 1_000_000, 100_000, table: table)
+
+      on_chunk = fn _chunk -> :ok end
+
+      opts = base_opts(table) ++ [backend: success_backend(), workspace_id: workspace_id]
+      assert {:error, :budget_exceeded} = Client.stream_chat("test", opts, on_chunk)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # cost calculation
   # ---------------------------------------------------------------------------
 

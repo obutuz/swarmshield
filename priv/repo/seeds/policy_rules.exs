@@ -348,3 +348,13 @@ policy_rules = [
 
 IO.puts("[Seeds] #{pr_count} new policy rules created (#{length(policy_rules)} defined)")
 IO.puts("[Seeds] Policy rules and detection rules seeded successfully")
+
+# Refresh PolicyCache ETS so newly seeded rules are available immediately.
+# Without this, the ETS cache retains stale data from boot and events evaluate
+# against 0 rules (always :allow), preventing deliberation from triggering.
+if Process.whereis(Swarmshield.Policies.PolicyCache) do
+  Swarmshield.Policies.PolicyCache.refresh_all()
+  IO.puts("[Seeds] PolicyCache refreshed — new rules are active")
+else
+  IO.puts("[Seeds] PolicyCache not running (seed-only mode) — skipping refresh")
+end

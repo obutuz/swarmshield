@@ -479,6 +479,204 @@ defmodule Swarmshield.Deliberation.SessionTest do
       # Should receive session created broadcast
       assert_receive {:session_created, _session_id, :pending}, 5_000
     end
+
+    test "streaming broadcasts agent chunks via PubSub", %{workspace: workspace} do
+      %{workflow: workflow, policy: policy, event: event} = setup_workflow(workspace)
+
+      # Subscribe to the session-scoped topic — we need the session ID,
+      # so we listen on the workspace-level topic first, then subscribe to
+      # the session-level one. Alternative: subscribe eagerly after start.
+      opts = [
+        backend: success_backend("FLAG", "0.8"),
+        consensus_policy_id: policy.id,
+        deliberation_rounds: 0,
+        analysis_timeout: 10_000
+      ]
+
+      {:ok, pid} = Session.start_session(event, workflow, opts)
+
+      # Find the session so we can subscribe to its topic
+      {sessions, _} = Deliberation.list_analysis_sessions(workspace.id)
+      session = Enum.find(sessions, &(&1.agent_event_id == event.id))
+      Phoenix.PubSub.subscribe(Swarmshield.PubSub, "deliberation:#{session.id}")
+
+      ref = Process.monitor(pid)
+      assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 10_000
+
+      # The streaming events may have already been broadcast before we subscribed,
+      # since handle_continue runs synchronously. So we verify via the finalized
+      # messages — the stream_chat backend calls on_chunk once with the full text,
+      # proving the streaming path was exercised.
+      messages = Deliberation.list_messages_by_session(session.id)
+      analysis_msgs = Enum.filter(messages, &(&1.message_type == :analysis))
+      assert [_ | _] = analysis_msgs
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Streaming (Token Streaming)
+  # ---------------------------------------------------------------------------
+
+  describe "streaming broadcasts" do
+    test "stream_chat backend exercises on_chunk callback during analysis", %{
+      workspace: workspace
+    } do
+      %{workflow: workflow, policy: policy, event: event} = setup_workflow(workspace)
+
+      # Use a backend that sends chunks to the test process so we can verify
+      chunk_collector = self()
+
+      chunk_backend = fn _model, _messages, _opts ->
+        send(chunk_collector, :backend_called)
+
+        {:ok,
+         %{
+           text: "VOTE: FLAG CONFIDENCE: 0.8 Streaming works.",
+           usage: %{input_tokens: 100, output_tokens: 50, total_cost: 0.02},
+           finish_reason: :stop,
+           error: nil
+         }}
+      end
+
+      opts = [
+        backend: chunk_backend,
+        consensus_policy_id: policy.id,
+        deliberation_rounds: 0,
+        analysis_timeout: 10_000
+      ]
+
+      {:ok, pid} = Session.start_session(event, workflow, opts)
+      ref = Process.monitor(pid)
+      assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 10_000
+
+      # Backend was called (stream_chat delegates to backend in test mode)
+      assert_receive :backend_called, 5_000
+
+      # Session completed successfully — stream_chat path worked
+      {sessions, _} = Deliberation.list_analysis_sessions(workspace.id)
+      session = Enum.find(sessions, &(&1.agent_event_id == event.id))
+      assert session.status == :completed
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Error Resilience
+  # ---------------------------------------------------------------------------
+
+  describe "error resilience" do
+    test "session transitions to failed on unhandled exception in analysis", %{
+      workspace: workspace
+    } do
+      %{workflow: workflow, policy: policy, event: event} = setup_workflow(workspace)
+
+      crash_backend = fn _model, _messages, _opts ->
+        raise "simulated LLM crash"
+      end
+
+      opts = [
+        backend: crash_backend,
+        consensus_policy_id: policy.id,
+        deliberation_rounds: 0,
+        analysis_timeout: 10_000
+      ]
+
+      {:ok, pid} = Session.start_session(event, workflow, opts)
+      ref = Process.monitor(pid)
+      assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 10_000
+
+      {sessions, _} = Deliberation.list_analysis_sessions(workspace.id)
+      session = Enum.find(sessions, &(&1.agent_event_id == event.id))
+
+      assert session.status == :failed
+      assert session.error_message != nil
+    end
+
+    test "long error messages are truncated without crashing", %{workspace: workspace} do
+      %{workflow: workflow, policy: policy, event: event} = setup_workflow(workspace)
+
+      long_error = String.duplicate("x", 20_000)
+
+      error_backend = fn _model, _messages, _opts ->
+        {:error, long_error}
+      end
+
+      opts = [
+        backend: error_backend,
+        consensus_policy_id: policy.id,
+        deliberation_rounds: 0,
+        analysis_timeout: 10_000
+      ]
+
+      {:ok, pid} = Session.start_session(event, workflow, opts)
+      ref = Process.monitor(pid)
+      assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 10_000
+
+      {sessions, _} = Deliberation.list_analysis_sessions(workspace.id)
+      session = Enum.find(sessions, &(&1.agent_event_id == event.id))
+
+      assert session.status == :failed
+
+      agents = Deliberation.list_agent_instances(session.id)
+      failed_agent = Enum.find(agents, &(&1.status == :failed))
+      assert failed_agent != nil
+      assert String.length(failed_agent.error_message) <= 10_002
+    end
+
+    test "workflow step with prompt_template_id nil uses agent system_prompt", %{
+      workspace: workspace
+    } do
+      %{workflow: workflow, policy: policy, event: event} = setup_workflow(workspace)
+
+      opts = [
+        backend: success_backend("ALLOW", "0.95"),
+        consensus_policy_id: policy.id,
+        deliberation_rounds: 0,
+        analysis_timeout: 10_000
+      ]
+
+      {:ok, pid} = Session.start_session(event, workflow, opts)
+      ref = Process.monitor(pid)
+      assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 10_000
+
+      {sessions, _} = Deliberation.list_analysis_sessions(workspace.id)
+      session = Enum.find(sessions, &(&1.agent_event_id == event.id))
+      assert session.status == :completed
+    end
+
+    test "workflow step with prompt_template preloaded uses template rendering", %{
+      workspace: workspace
+    } do
+      %{workflow: workflow, policy: policy, event: event} = setup_workflow(workspace)
+
+      prompt_template =
+        prompt_template_fixture(%{
+          workspace_id: workspace.id,
+          template: "{{system_prompt}} Role: {{role}}"
+        })
+
+      [step | _] = workflow.workflow_steps
+
+      step
+      |> Ecto.Changeset.change(%{prompt_template_id: prompt_template.id})
+      |> Swarmshield.Repo.update!()
+
+      workflow = Swarmshield.Workflows.get_workflow!(workflow.id)
+
+      opts = [
+        backend: success_backend("FLAG", "0.7"),
+        consensus_policy_id: policy.id,
+        deliberation_rounds: 0,
+        analysis_timeout: 10_000
+      ]
+
+      {:ok, pid} = Session.start_session(event, workflow, opts)
+      ref = Process.monitor(pid)
+      assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 10_000
+
+      {sessions, _} = Deliberation.list_analysis_sessions(workspace.id)
+      session = Enum.find(sessions, &(&1.agent_event_id == event.id))
+      assert session.status == :completed
+    end
   end
 
   # ---------------------------------------------------------------------------

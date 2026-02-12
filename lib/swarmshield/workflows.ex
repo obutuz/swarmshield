@@ -47,7 +47,10 @@ defmodule Swarmshield.Workflows do
   def get_workflow!(id) when is_binary(id) do
     Workflow
     |> Repo.get!(id)
-    |> Repo.preload(workflow_steps: :agent_definition, ghost_protocol_config: [])
+    |> Repo.preload(
+      workflow_steps: [:agent_definition, :prompt_template],
+      ghost_protocol_config: []
+    )
   end
 
   def get_workflow_for_workspace!(id, workspace_id)
