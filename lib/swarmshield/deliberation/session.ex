@@ -634,16 +634,21 @@ defmodule Swarmshield.Deliberation.Session do
 
     case policies do
       [policy | _] -> policy
-      [] -> default_consensus_policy()
+      [] -> create_default_policy(workspace_id)
     end
   end
 
-  defp default_consensus_policy do
-    %Swarmshield.Deliberation.ConsensusPolicy{
-      strategy: :majority,
-      threshold: 0.5,
-      weights: %{}
-    }
+  defp create_default_policy(workspace_id) do
+    {:ok, policy} =
+      Workflows.create_consensus_policy(workspace_id, %{
+        name: "Default Majority Vote",
+        description: "Auto-created default policy — simple majority vote",
+        strategy: :majority,
+        threshold: 0.5,
+        enabled: true
+      })
+
+    policy
   end
 
   defp compute_expires_at(nil, _now), do: nil

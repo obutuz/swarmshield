@@ -12,3 +12,4 @@
 
 Code.require_file("seeds/roles_and_permissions.exs", __DIR__)
 Code.require_file("seeds/policy_rules.exs", __DIR__)
+Code.require_file("seeds/demo_data.exs", __DIR__)

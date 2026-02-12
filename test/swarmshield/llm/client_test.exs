@@ -1,7 +1,8 @@
 defmodule Swarmshield.LLM.ClientTest do
-  use ExUnit.Case, async: false
+  use Swarmshield.DataCase, async: false
 
-  alias Swarmshield.LLM.{Budget, Client}
+  alias Swarmshield.Accounts
+  alias Swarmshield.LLM.{Budget, Client, KeyStore}
 
   setup do
     table_name = :"client_budget_#{System.unique_integer([:positive])}"
@@ -244,6 +245,71 @@ defmodule Swarmshield.LLM.ClientTest do
     test "skips API key check when backend is provided", %{table: table} do
       opts = base_opts(table) ++ [backend: success_backend()]
       assert {:ok, _} = Client.chat("test", opts)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # chat/2 - workspace key resolution
+  # ---------------------------------------------------------------------------
+
+  describe "chat/2 workspace key resolution" do
+    setup %{table: table} do
+      {:ok, workspace} =
+        Accounts.create_workspace(%{
+          name: "LLM Client Test",
+          slug: "llm-client-test-#{System.unique_integer([:positive])}"
+        })
+
+      KeyStore.store_key(workspace.id, "sk-ant-workspace-key")
+
+      %{workspace: workspace, table: table}
+    end
+
+    test "resolves API key from KeyStore when workspace_id provided", %{
+      workspace: workspace,
+      table: table
+    } do
+      backend = fn _model, _messages, opts ->
+        send(self(), {:api_key, opts[:api_key]})
+
+        {:ok,
+         %{
+           text: "ok",
+           usage: %{input_tokens: 0, output_tokens: 0, total_cost: 0.0},
+           finish_reason: :stop,
+           error: nil
+         }}
+      end
+
+      opts = base_opts(table) ++ [backend: backend, workspace_id: workspace.id]
+      {:ok, _} = Client.chat("test", opts)
+
+      assert_receive {:api_key, "sk-ant-workspace-key"}
+    end
+
+    test "explicit api_key takes precedence over workspace key", %{
+      workspace: workspace,
+      table: table
+    } do
+      backend = fn _model, _messages, opts ->
+        send(self(), {:api_key, opts[:api_key]})
+
+        {:ok,
+         %{
+           text: "ok",
+           usage: %{input_tokens: 0, output_tokens: 0, total_cost: 0.0},
+           finish_reason: :stop,
+           error: nil
+         }}
+      end
+
+      opts =
+        base_opts(table) ++
+          [backend: backend, workspace_id: workspace.id, api_key: "sk-explicit"]
+
+      {:ok, _} = Client.chat("test", opts)
+
+      assert_receive {:api_key, "sk-explicit"}
     end
   end
 

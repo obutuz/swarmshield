@@ -42,3 +42,6 @@ config :phoenix_live_view,
 # Sort query params output of verified routes for robust url comparisons
 config :phoenix,
   sort_verified_routes_query_params: true
+
+# Simulator uses Req.Test stub in test environment
+config :swarmshield, Swarmshield.Simulator, req_options: [plug: {Req.Test, Swarmshield.Simulator}]

@@ -13,6 +13,7 @@ defmodule Swarmshield.Gateway do
   alias Swarmshield.Repo
 
   alias Swarmshield.Accounts
+  alias Swarmshield.Deliberation.Session, as: DeliberationSession
   alias Swarmshield.Gateway.{AgentEvent, RegisteredAgent}
   alias Swarmshield.Policies
   alias Swarmshield.Policies.PolicyEngine
@@ -741,6 +742,20 @@ defmodule Swarmshield.Gateway do
         :ok
 
       workflow ->
+        event = get_agent_event!(event_id)
+
+        case DeliberationSession.start_session(event, workflow) do
+          {:ok, pid} ->
+            Logger.info(
+              "[Gateway] Deliberation session started for event #{event_id}, pid=#{inspect(pid)}"
+            )
+
+          {:error, reason} ->
+            Logger.warning(
+              "[Gateway] Failed to start deliberation for event #{event_id}: #{inspect(reason)}"
+            )
+        end
+
         Phoenix.PubSub.broadcast(
           Swarmshield.PubSub,
           "deliberations:#{workspace_id}",

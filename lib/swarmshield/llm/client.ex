@@ -12,6 +12,7 @@ defmodule Swarmshield.LLM.Client do
   require Logger
 
   alias Swarmshield.LLM.Budget
+  alias Swarmshield.LLM.KeyStore
 
   @default_model "anthropic:claude-opus-4-6"
   @default_max_tokens 4096
@@ -51,6 +52,7 @@ defmodule Swarmshield.LLM.Client do
   @spec chat(ReqLLM.Context.t() | String.t(), chat_opts()) ::
           {:ok, chat_result()} | {:error, atom() | {atom(), term()}}
   def chat(messages, opts \\ []) do
+    opts = maybe_resolve_workspace_key(opts)
     model_spec = Keyword.get(opts, :model, @default_model)
     workspace_id = Keyword.get(opts, :workspace_id)
 
@@ -293,6 +295,19 @@ defmodule Swarmshield.LLM.Client do
     case Keyword.get(opts, :api_key) do
       nil -> call_opts
       key -> Keyword.put(call_opts, :api_key, key)
+    end
+  end
+
+  defp maybe_resolve_workspace_key(opts) do
+    case {Keyword.get(opts, :api_key), Keyword.get(opts, :workspace_id)} do
+      {nil, workspace_id} when is_binary(workspace_id) ->
+        case KeyStore.get_key(workspace_id) do
+          {:ok, key} -> Keyword.put(opts, :api_key, key)
+          :error -> opts
+        end
+
+      _ ->
+        opts
     end
   end
 

@@ -9,6 +9,7 @@ defmodule SwarmshieldWeb.Admin.SettingsLive do
   use SwarmshieldWeb, :live_view
 
   alias Swarmshield.Accounts
+  alias Swarmshield.LLM.KeyStore
   alias SwarmshieldWeb.Hooks.AuthHooks
 
   # -------------------------------------------------------------------
@@ -40,7 +41,10 @@ defmodule SwarmshieldWeb.Admin.SettingsLive do
        |> assign(:settings, settings)
        |> assign(:default_timeout, settings["default_timeout_seconds"] || 300)
        |> assign(:max_rounds, settings["max_deliberation_rounds"] || 3)
-       |> assign(:newly_generated_key, nil)}
+       |> assign(:newly_generated_key, nil)
+       |> assign(:llm_key_configured, KeyStore.has_key?(workspace))
+       |> assign(:llm_key_prefix, KeyStore.get_key_prefix(workspace))
+       |> assign(:llm_key_input, "")}
     else
       {:noreply,
        socket
@@ -93,6 +97,22 @@ defmodule SwarmshieldWeb.Admin.SettingsLive do
 
   def handle_event("dismiss_key", _params, socket) do
     {:noreply, assign(socket, :newly_generated_key, nil)}
+  end
+
+  def handle_event("save_llm_key", %{"llm_api_key" => api_key}, socket) do
+    if AuthHooks.has_socket_permission?(socket, "settings:update") do
+      save_llm_key(socket, String.trim(api_key))
+    else
+      {:noreply, put_flash(socket, :error, "Unauthorized")}
+    end
+  end
+
+  def handle_event("clear_llm_key", _params, socket) do
+    if AuthHooks.has_socket_permission?(socket, "settings:update") do
+      clear_llm_key(socket)
+    else
+      {:noreply, put_flash(socket, :error, "Unauthorized")}
+    end
   end
 
   # -------------------------------------------------------------------
@@ -158,6 +178,60 @@ defmodule SwarmshieldWeb.Admin.SettingsLive do
 
       {:error, _changeset} ->
         {:noreply, put_flash(socket, :error, "Could not regenerate API key.")}
+    end
+  end
+
+  defp save_llm_key(socket, "") do
+    {:noreply, put_flash(socket, :error, "API key cannot be empty.")}
+  end
+
+  defp save_llm_key(socket, api_key) do
+    workspace_id = socket.assigns.workspace.id
+
+    case KeyStore.store_key(workspace_id, api_key) do
+      :ok ->
+        Accounts.create_audit_entry(%{
+          action: "settings.llm_key_configured",
+          resource_type: "workspace",
+          resource_id: workspace_id,
+          workspace_id: workspace_id,
+          actor_id: socket.assigns.current_scope.user.id,
+          metadata: %{"key_prefix" => String.slice(api_key, 0, 8)}
+        })
+
+        {:noreply,
+         socket
+         |> assign(:llm_key_configured, true)
+         |> assign(:llm_key_prefix, String.slice(api_key, 0, 8))
+         |> assign(:llm_key_input, "")
+         |> put_flash(:info, "LLM API key saved and encrypted.")}
+
+      {:error, _reason} ->
+        {:noreply, put_flash(socket, :error, "Could not save API key.")}
+    end
+  end
+
+  defp clear_llm_key(socket) do
+    workspace_id = socket.assigns.workspace.id
+
+    case KeyStore.delete_key(workspace_id) do
+      :ok ->
+        Accounts.create_audit_entry(%{
+          action: "settings.llm_key_removed",
+          resource_type: "workspace",
+          resource_id: workspace_id,
+          workspace_id: workspace_id,
+          actor_id: socket.assigns.current_scope.user.id
+        })
+
+        {:noreply,
+         socket
+         |> assign(:llm_key_configured, false)
+         |> assign(:llm_key_prefix, nil)
+         |> put_flash(:info, "LLM API key removed.")}
+
+      {:error, _reason} ->
+        {:noreply, put_flash(socket, :error, "Could not remove API key.")}
     end
   end
 
@@ -294,6 +368,86 @@ defmodule SwarmshieldWeb.Admin.SettingsLive do
               </button>
             </div>
           </form>
+        </div>
+
+        <%!-- LLM Provider --%>
+        <div class="bg-base-100 border-[0.5px] border-base-300 rounded-lg p-6">
+          <div class="flex items-center gap-2 mb-4">
+            <.icon name="hero-cpu-chip" class="size-5 text-accent" />
+            <h2 class="text-lg font-semibold text-base-content">LLM Provider</h2>
+          </div>
+          <p class="text-sm text-base-content/70 mb-4">
+            Configure the Anthropic API key used by SwarmShield's deliberation agents.
+            The key is encrypted at rest and never displayed in full.
+          </p>
+
+          <div class="space-y-4">
+            <%!-- Status indicator --%>
+            <div class="flex items-center gap-3">
+              <div :if={@llm_key_configured} class="flex items-center gap-2">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success/20 text-success">
+                  Configured
+                </span>
+                <span class="text-sm font-mono text-base-content/70">
+                  {@llm_key_prefix}...
+                </span>
+              </div>
+              <div :if={!@llm_key_configured} class="flex items-center gap-2">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning/20 text-warning">
+                  Not configured
+                </span>
+                <span class="text-sm text-base-content/50">
+                  Deliberation agents cannot run without an API key.
+                </span>
+              </div>
+            </div>
+
+            <%!-- API key input form --%>
+            <form
+              :if={AuthHooks.has_socket_permission?(assigns, "settings:update")}
+              id="llm-key-form"
+              phx-submit="save_llm_key"
+              class="space-y-3"
+            >
+              <div>
+                <label class="block text-sm font-medium text-base-content/80 mb-1">
+                  Anthropic API Key
+                </label>
+                <input
+                  type="password"
+                  name="llm_api_key"
+                  value={@llm_key_input}
+                  placeholder={
+                    if @llm_key_configured,
+                      do: "Enter new key to replace existing",
+                      else: "sk-ant-..."
+                  }
+                  autocomplete="off"
+                  phx-debounce="300"
+                  class="w-full h-[44px] bg-base-200 border-[0.5px] border-base-300 rounded-lg text-base-content focus:border-primary focus:ring-1 focus:ring-primary px-3 font-mono text-sm"
+                />
+              </div>
+              <div class="flex flex-wrap justify-end gap-3">
+                <button
+                  :if={@llm_key_configured}
+                  type="button"
+                  phx-click="clear_llm_key"
+                  data-confirm="Remove LLM API key? Deliberation agents will not be able to run until a new key is configured."
+                  class="inline-flex items-center gap-2 h-[44px] px-6 rounded-lg border-[0.5px] border-error/30 text-error hover:bg-error/10 text-sm font-medium transition-colors"
+                >
+                  <.icon name="hero-trash" class="size-4" /> Remove Key
+                </button>
+                <button
+                  type="submit"
+                  phx-disable-with="Saving..."
+                  class="btn btn-primary h-[44px] px-6 shadow-none"
+                >
+                  <.icon name="hero-lock-closed" class="size-4 mr-1" />
+                  {if @llm_key_configured, do: "Update Key", else: "Save Key"}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
 
         <%!-- API Key management --%>
