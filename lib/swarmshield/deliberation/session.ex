@@ -406,8 +406,8 @@ defmodule Swarmshield.Deliberation.Session do
 
     {:ok, updated} =
       Deliberation.update_agent_instance(agent, %{
-        vote: vote || agent.vote,
-        confidence: confidence || agent.confidence,
+        vote: vote,
+        confidence: confidence,
         tokens_used: (agent.tokens_used || 0) + tokens,
         cost_cents: (agent.cost_cents || 0) + chat_result.cost_cents
       })
@@ -707,8 +707,6 @@ defmodule Swarmshield.Deliberation.Session do
     confidence = extract_confidence(text)
     {vote, confidence}
   end
-
-  defp parse_llm_vote(_), do: {nil, nil}
 
   @vote_pattern ~r/VOTE\s*:\s*(BLOCK|FLAG|ALLOW)/i
   @verdict_pattern ~r/VERDICT.*?(BLOCK|FLAG)/i

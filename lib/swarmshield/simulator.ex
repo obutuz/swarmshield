@@ -394,11 +394,7 @@ defmodule Swarmshield.Simulator do
   end
 
   defp production? do
-    Application.get_env(:swarmshield, :env, default_env()) == :prod
-  end
-
-  defp default_env do
-    if function_exported?(Mix, :env, 0), do: Mix.env(), else: :prod
+    Application.get_env(:swarmshield, :env, :prod) == :prod
   end
 
   defp get_configured_port do

@@ -236,6 +236,8 @@ defmodule Swarmshield.Workflows do
     (max_pos || 0) + 1
   end
 
+  # Dialyzer false positive: Multi.t() contains opaque MapSet internally
+  @dialyzer {:nowarn_function, reorder_workflow_steps: 2}
   def reorder_workflow_steps(workflow_id, ordered_ids)
       when is_binary(workflow_id) and is_list(ordered_ids) do
     existing_ids =

@@ -15,6 +15,20 @@ defmodule Swarmshield.Deliberation.ConsensusPolicy do
 
   @strategies [:majority, :supermajority, :unanimous, :weighted]
 
+  @type t :: %__MODULE__{
+          id: Ecto.UUID.t() | nil,
+          name: String.t() | nil,
+          description: String.t() | nil,
+          strategy: :majority | :supermajority | :unanimous | :weighted | nil,
+          threshold: float() | nil,
+          weights: map() | nil,
+          require_unanimous_on: [String.t()] | nil,
+          enabled: boolean() | nil,
+          workspace_id: Ecto.UUID.t() | nil,
+          inserted_at: DateTime.t() | nil,
+          updated_at: DateTime.t() | nil
+        }
+
   schema "consensus_policies" do
     field :name, :string
     field :description, :string
