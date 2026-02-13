@@ -23,9 +23,12 @@ defmodule Swarmshield.Gateway do
   @max_page_size 100
 
   # Valid status transitions for agent events.
-  # pending -> allowed | flagged | blocked (terminal states from policy evaluation)
+  # pending -> allowed | flagged | blocked (initial policy evaluation)
+  # flagged/blocked -> allowed | flagged | blocked (deliberation verdict override)
   @valid_event_status_transitions %{
-    pending: [:allowed, :flagged, :blocked]
+    pending: [:allowed, :flagged, :blocked],
+    flagged: [:allowed, :flagged, :blocked],
+    blocked: [:allowed, :flagged, :blocked]
   }
 
   # ---------------------------------------------------------------------------
@@ -646,11 +649,16 @@ defmodule Swarmshield.Gateway do
 
   defp create_violations_for_matched_rules(_workspace_id, _event, :allow, _matched_rules), do: []
 
-  defp create_violations_for_matched_rules(workspace_id, event, action, matched_rules) do
-    action_taken = action_to_violation_action(action)
-    severity = action_to_violation_severity(action)
-
+  defp create_violations_for_matched_rules(workspace_id, event, _action, matched_rules) do
     Enum.reduce(matched_rules, [], fn rule_match, acc ->
+      # Each violation gets its own action_taken and severity based on the
+      # individual rule's action, not the overall event action. A flag rule
+      # that matched is recorded as flagged/medium even when another rule
+      # caused the event to be blocked.
+      rule_action = rule_match_to_atom(rule_match.action)
+      action_taken = action_to_violation_action(rule_action)
+      severity = action_to_violation_severity(rule_action)
+
       try do
         case Policies.create_policy_violation(%{
                workspace_id: workspace_id,
@@ -676,6 +684,11 @@ defmodule Swarmshield.Gateway do
       end
     end)
   end
+
+  defp rule_match_to_atom(action) when is_atom(action), do: action
+  defp rule_match_to_atom("block"), do: :block
+  defp rule_match_to_atom("flag"), do: :flag
+  defp rule_match_to_atom(_), do: :flag
 
   defp action_to_violation_action(:flag), do: :flagged
   defp action_to_violation_action(:block), do: :blocked

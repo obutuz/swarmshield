@@ -660,18 +660,20 @@ defmodule Swarmshield.GatewayTest do
       assert errors_on(changeset).status != nil
     end
 
-    test "rejects transition from flagged (terminal state)", %{event: event} do
+    test "allows deliberation verdict to override flagged status", %{event: event} do
       {:ok, flagged} = Gateway.update_agent_event_status(event, :flagged)
+      assert flagged.status == :flagged
 
-      assert {:error, changeset} = Gateway.update_agent_event_status(flagged, :blocked)
-      assert errors_on(changeset).status != nil
+      {:ok, updated} = Gateway.update_agent_event_status(flagged, :allowed)
+      assert updated.status == :allowed
     end
 
-    test "rejects transition from blocked (terminal state)", %{event: event} do
+    test "allows deliberation verdict to override blocked status", %{event: event} do
       {:ok, blocked} = Gateway.update_agent_event_status(event, :blocked)
+      assert blocked.status == :blocked
 
-      assert {:error, changeset} = Gateway.update_agent_event_status(blocked, :allowed)
-      assert errors_on(changeset).status != nil
+      {:ok, updated} = Gateway.update_agent_event_status(blocked, :allowed)
+      assert updated.status == :allowed
     end
 
     test "rejects invalid target status from pending", %{event: event} do

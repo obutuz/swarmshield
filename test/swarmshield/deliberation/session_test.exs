@@ -622,6 +622,91 @@ defmodule Swarmshield.Deliberation.SessionTest do
       assert String.length(failed_agent.error_message) <= 10_002
     end
 
+    test "empty LLM response retries once and succeeds", %{workspace: workspace} do
+      %{workflow: workflow, policy: policy, event: event} = setup_workflow(workspace)
+
+      call_count = :counters.new(1, [:atomics])
+
+      retry_backend = fn _model, _messages, _opts ->
+        count = :counters.get(call_count, 1)
+        :counters.add(call_count, 1, 1)
+
+        if count == 0 do
+          {:ok,
+           %{
+             text: "",
+             usage: %{input_tokens: 10, output_tokens: 0, total_cost: 0.0},
+             finish_reason: :stop,
+             error: nil
+           }}
+        else
+          {:ok,
+           %{
+             text: "VOTE: BLOCK CONFIDENCE: 0.9 Retry succeeded.",
+             usage: %{input_tokens: 100, output_tokens: 50, total_cost: 0.02},
+             finish_reason: :stop,
+             error: nil
+           }}
+        end
+      end
+
+      opts = [
+        backend: retry_backend,
+        consensus_policy_id: policy.id,
+        deliberation_rounds: 0,
+        analysis_timeout: 10_000
+      ]
+
+      {:ok, pid} = Session.start_session(event, workflow, opts)
+      ref = Process.monitor(pid)
+      assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 10_000
+
+      {sessions, _} = Deliberation.list_analysis_sessions(workspace.id)
+      session = Enum.find(sessions, &(&1.agent_event_id == event.id))
+      assert session.status == :completed
+
+      agents = Deliberation.list_agent_instances(session.id)
+      assert [agent] = agents
+      assert agent.status == :completed
+      assert agent.vote == :block
+      assert agent.initial_assessment =~ "Retry succeeded"
+    end
+
+    test "empty LLM response after retry marks agent as failed", %{workspace: workspace} do
+      %{workflow: workflow, policy: policy, event: event} = setup_workflow(workspace)
+
+      empty_backend = fn _model, _messages, _opts ->
+        {:ok,
+         %{
+           text: "",
+           usage: %{input_tokens: 10, output_tokens: 0, total_cost: 0.0},
+           finish_reason: :stop,
+           error: nil
+         }}
+      end
+
+      opts = [
+        backend: empty_backend,
+        consensus_policy_id: policy.id,
+        deliberation_rounds: 0,
+        analysis_timeout: 10_000
+      ]
+
+      {:ok, pid} = Session.start_session(event, workflow, opts)
+      ref = Process.monitor(pid)
+      assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 10_000
+
+      {sessions, _} = Deliberation.list_analysis_sessions(workspace.id)
+      session = Enum.find(sessions, &(&1.agent_event_id == event.id))
+
+      assert session.status == :failed
+
+      agents = Deliberation.list_agent_instances(session.id)
+      assert [agent] = agents
+      assert agent.status == :failed
+      assert agent.error_message =~ "empty_response_after_retry"
+    end
+
     test "workflow step with prompt_template_id nil uses agent system_prompt", %{
       workspace: workspace
     } do

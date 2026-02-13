@@ -386,7 +386,7 @@ defmodule Swarmshield.Policies.PolicyEngineTest do
       assert Enum.any?(matched, fn m -> m.rule_type == :payload_size end)
     end
 
-    test "block short-circuits evaluation - remaining rules not evaluated", %{
+    test "all rules evaluated even after block match for full visibility", %{
       workspace: workspace,
       agent: agent
     } do
@@ -401,7 +401,7 @@ defmodule Swarmshield.Policies.PolicyEngineTest do
           config: %{"max_content_bytes" => 5}
         })
 
-      # Low priority flag rule (should not be evaluated)
+      # Low priority flag rule (now also evaluated)
       _flag_rule =
         policy_rule_fixture(%{
           workspace_id: workspace.id,
@@ -425,10 +425,11 @@ defmodule Swarmshield.Policies.PolicyEngineTest do
 
       {action, matched, details} = PolicyEngine.evaluate(event, workspace.id)
       assert action == :block
-      # Only 1 rule evaluated (short-circuited)
-      assert details.evaluated_count == 1
+      # Both rules evaluated — no short-circuit
+      assert details.evaluated_count == 2
       assert details.block_count == 1
-      assert length(matched) == 1
+      assert details.flag_count == 1
+      assert length(matched) == 2
     end
 
     test "multiple flag matches all collected", %{workspace: workspace, agent: agent} do

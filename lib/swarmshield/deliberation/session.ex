@@ -811,8 +811,19 @@ defmodule Swarmshield.Deliberation.Session do
 
   defp update_event_status(event, decision) do
     case Map.get(@verdict_to_event_status, decision) do
-      nil -> :ok
-      status -> Swarmshield.Gateway.update_agent_event_status(event, status)
+      nil ->
+        :ok
+
+      status ->
+        case Swarmshield.Gateway.update_agent_event_status(event, status) do
+          {:ok, _event} ->
+            :ok
+
+          {:error, changeset} ->
+            Logger.warning(
+              "[Session] Failed to update event #{event.id} status to #{status}: #{inspect(changeset.errors)}"
+            )
+        end
     end
   end
 
@@ -952,10 +963,37 @@ defmodule Swarmshield.Deliberation.Session do
         result = LLMClient.stream_chat(context, llm_opts, on_chunk)
         broadcast_streaming(topic, {:agent_streaming_done, instance_id})
 
+        retry_fn = fn ->
+          Logger.warning(
+            "[Session] Empty LLM response for #{agent_name} (#{instance_id}), retrying once"
+          )
+
+          broadcast_streaming(
+            topic,
+            {:agent_streaming_start, instance_id, "#{agent_name} (retry)"}
+          )
+
+          retry_result = LLMClient.stream_chat(context, llm_opts, on_chunk)
+          broadcast_streaming(topic, {:agent_streaming_done, instance_id})
+          retry_result
+        end
+
+        result = maybe_retry_empty_response(result, retry_fn)
+
         {instance_id, session_id, result}
       end
     )
   end
+
+  defp maybe_retry_empty_response({:ok, %{text: text}}, retry_fn)
+       when text == "" or is_nil(text) do
+    case retry_fn.() do
+      {:ok, %{text: rt}} when rt == "" or is_nil(rt) -> {:error, :empty_response_after_retry}
+      other -> other
+    end
+  end
+
+  defp maybe_retry_empty_response(result, _retry_fn), do: result
 
   defp normalize_llm_text(nil), do: "[No response from agent]"
   defp normalize_llm_text(""), do: "[Empty response from agent]"

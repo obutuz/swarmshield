@@ -99,261 +99,421 @@ defmodule SwarmshieldWeb.EventShowLive do
           </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <%!-- Main content: 2 cols --%>
-          <div class="lg:col-span-2 space-y-6">
-            <%!-- Event Data Card --%>
-            <div
-              id="event-data"
-              class="rounded-xl border border-base-300/50 bg-base-100 overflow-hidden"
-            >
-              <div class="px-5 py-3 border-b border-base-300/30">
-                <h2 class="text-sm font-semibold uppercase tracking-wider text-base-content/50">
-                  Event Data
-                </h2>
+        <%!-- ============================================================ --%>
+        <%!-- SECTION 1: Deliberation & Verdict (results first)            --%>
+        <%!-- ============================================================ --%>
+
+        <%!-- Deliberation Session Strip + Quick Info --%>
+        <div
+          :if={@session}
+          id="linked-session"
+          class="rounded-xl border border-base-300/50 bg-base-100 overflow-hidden"
+        >
+          <div class="px-5 py-3 border-b border-base-300/30 flex items-center gap-2">
+            <.icon name="hero-chat-bubble-left-right" class="size-4 text-primary" />
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-base-content/50">
+              Deliberation
+            </h2>
+            <.ghost_badge :if={@is_ephemeral?} />
+          </div>
+          <div class="px-5 py-3">
+            <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
+              <div class="flex items-center gap-2 text-sm">
+                <span class="text-xs text-base-content/50">Session</span>
+                <.link
+                  navigate={~p"/deliberations/#{@session.id}"}
+                  class="text-primary hover:underline font-mono text-xs"
+                >
+                  {String.slice(@session.id, 0..7)}...
+                </.link>
               </div>
-              <div class="p-5 space-y-4">
-                <.detail_row label="Type">
-                  <.type_badge type={@event.event_type} />
-                </.detail_row>
-                <.detail_row label="Severity">
-                  <span class={severity_color(@event.severity)}>
-                    {format_severity(@event.severity)}
-                  </span>
-                </.detail_row>
-                <.detail_row label="Content">
-                  <p class="text-sm whitespace-pre-wrap break-words">{@event.content}</p>
-                </.detail_row>
-                <.detail_row label="Agent">
-                  {agent_name(@event)}
-                </.detail_row>
-                <.detail_row :if={@event.source_ip} label="Source IP">
-                  <span class="font-mono text-xs">{@event.source_ip}</span>
-                </.detail_row>
-                <.detail_row label="Created">
-                  <span class="text-xs tabular-nums">{format_datetime(@event.inserted_at)}</span>
-                </.detail_row>
-                <.detail_row :if={@event.evaluated_at} label="Evaluated">
-                  <span class="text-xs tabular-nums">{format_datetime(@event.evaluated_at)}</span>
-                </.detail_row>
+              <div class="flex items-center gap-2 text-sm">
+                <span class="text-xs text-base-content/50">Status</span>
+                <.session_status_badge status={@session.status} />
+              </div>
+              <div class="flex items-center gap-2 text-sm">
+                <span class="text-xs text-base-content/50">Trigger</span>
+                <span class="text-xs">{@session.trigger || "-"}</span>
+              </div>
+              <div class="flex items-center gap-2 text-sm">
+                <span class="text-xs text-base-content/50">Violations</span>
+                <span class="text-xs tabular-nums font-medium">{length(@violations)}</span>
+              </div>
+              <div class="flex items-center gap-2 text-sm">
+                <span class="text-xs text-base-content/50">Workspace</span>
+                <span class="text-xs">{@current_workspace.name}</span>
               </div>
             </div>
+          </div>
+        </div>
 
-            <%!-- Payload Card --%>
-            <div
-              :if={@event.payload != %{}}
-              id="event-payload"
-              class="rounded-xl border border-base-300/50 bg-base-100 overflow-hidden"
-            >
-              <div class="px-5 py-3 border-b border-base-300/30">
-                <h2 class="text-sm font-semibold uppercase tracking-wider text-base-content/50">
-                  Payload
-                </h2>
-              </div>
-              <div class="p-5">
-                <pre class="text-xs font-mono bg-base-200/50 rounded-lg p-4 overflow-x-auto whitespace-pre-wrap break-words"><code>{format_json(@event.payload)}</code></pre>
-              </div>
+        <%!-- No Session Card --%>
+        <div
+          :if={is_nil(@session)}
+          id="no-session"
+          class="rounded-xl border border-base-300/50 bg-base-100 p-5 text-center"
+        >
+          <.icon
+            name="hero-chat-bubble-left-right"
+            class="size-8 text-base-content/20 mx-auto mb-2"
+          />
+          <p class="text-sm text-base-content/50">No deliberation session</p>
+          <p class="text-xs text-base-content/30 mt-1">
+            This event did not trigger a deliberation.
+          </p>
+        </div>
+
+        <%!-- Verdict Summary Card --%>
+        <div
+          :if={@session && @session.verdict}
+          id="verdict-summary"
+          class="rounded-xl border border-base-300/50 bg-base-100 overflow-hidden"
+        >
+          <div class="px-5 py-3 border-b border-base-300/30 flex items-center gap-2">
+            <.icon name="hero-scale" class="size-4 text-primary" />
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-base-content/50">
+              Final Verdict
+            </h2>
+          </div>
+          <div class="p-5 space-y-5">
+            <%!-- Decision + Confidence + Consensus --%>
+            <div class="flex flex-wrap items-center gap-3">
+              <span class={[
+                "inline-flex items-center px-3 py-1 rounded-lg text-sm font-bold uppercase tracking-wide",
+                verdict_decision_classes(@session.verdict.decision)
+              ]}>
+                {@session.verdict.decision}
+              </span>
+              <span
+                :if={@session.verdict.confidence}
+                class="text-sm text-base-content/70 tabular-nums"
+              >
+                Confidence:
+                <span class="font-semibold">
+                  {format_confidence(@session.verdict.confidence)}
+                </span>
+              </span>
+              <span
+                :if={@session.verdict.consensus_reached}
+                class="inline-flex items-center gap-1 text-sm text-success"
+              >
+                <.icon name="hero-check-circle" class="size-4" /> Consensus
+              </span>
+              <span
+                :if={not @session.verdict.consensus_reached}
+                class="inline-flex items-center gap-1 text-sm text-warning"
+              >
+                <.icon name="hero-exclamation-circle" class="size-4" /> No Consensus
+              </span>
             </div>
 
-            <%!-- Evaluation Result Card --%>
+            <%!-- Vote Breakdown Bar --%>
             <div
-              :if={@event.evaluation_result != %{}}
-              id="evaluation-result"
-              class="rounded-xl border border-base-300/50 bg-base-100 overflow-hidden"
+              :if={@session.verdict.vote_breakdown != %{}}
+              id="vote-breakdown"
             >
-              <div class="px-5 py-3 border-b border-base-300/30">
-                <h2 class="text-sm font-semibold uppercase tracking-wider text-base-content/50">
-                  Policy Evaluation
-                </h2>
-              </div>
-              <div class="p-5 space-y-4">
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <.eval_stat
-                    label="Action"
-                    value={@event.evaluation_result["action"] || "-"}
-                  />
-                  <.eval_stat
-                    label="Rules Evaluated"
-                    value={@event.evaluation_result["evaluated_count"] || 0}
-                  />
-                  <.eval_stat
-                    label="Blocked"
-                    value={@event.evaluation_result["block_count"] || 0}
-                  />
-                  <.eval_stat
-                    label="Flagged"
-                    value={@event.evaluation_result["flag_count"] || 0}
-                  />
+              <h3 class="text-xs font-medium text-base-content/50 mb-2">Vote Breakdown</h3>
+              <div class="flex rounded-lg overflow-hidden h-6">
+                <div
+                  :for={
+                    {vote_type, count} <-
+                      vote_breakdown_sorted(@session.verdict.vote_breakdown)
+                  }
+                  :if={count > 0}
+                  class={[
+                    "flex items-center justify-center text-xs font-medium text-white",
+                    vote_bar_color(vote_type)
+                  ]}
+                  style={"flex: #{count}"}
+                >
+                  {vote_type}: {count}
                 </div>
+              </div>
+              <div class="flex flex-wrap gap-4 mt-2">
+                <div
+                  :for={
+                    {vote_type, count} <-
+                      vote_breakdown_sorted(@session.verdict.vote_breakdown)
+                  }
+                  class="flex items-center gap-1.5 text-xs text-base-content/60"
+                >
+                  <span class={["size-2.5 rounded-full", vote_dot_color(vote_type)]} />
+                  <span class="capitalize">{vote_type}:</span>
+                  <span class="font-medium tabular-nums">{count}</span>
+                </div>
+              </div>
+            </div>
 
-                <%!-- Matched Rules --%>
-                <div :if={matched_rules(@event) != []}>
-                  <h3 class="text-xs font-medium text-base-content/50 mb-2">Matched Rules</h3>
-                  <div class="space-y-2">
-                    <div
-                      :for={rule <- matched_rules(@event)}
-                      class="flex items-center gap-3 rounded-lg bg-base-200/50 px-3 py-2"
+            <%!-- Agent Votes Grid --%>
+            <div
+              :if={agent_instances_with_votes(@session) != []}
+              id="agent-votes"
+            >
+              <h3 class="text-xs font-medium text-base-content/50 mb-2">Agent Votes</h3>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div
+                  :for={instance <- agent_instances_with_votes(@session)}
+                  class={[
+                    "rounded-lg border p-3 space-y-1.5",
+                    agent_vote_bg(instance.vote)
+                  ]}
+                >
+                  <p class="text-sm font-semibold truncate">
+                    {agent_instance_name(instance)}
+                  </p>
+                  <p class="text-xs text-base-content/50 truncate">
+                    {agent_instance_role(instance)}
+                  </p>
+                  <div class="flex items-center gap-2">
+                    <span
+                      :if={instance.vote}
+                      class={[
+                        "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium uppercase",
+                        verdict_decision_classes(instance.vote)
+                      ]}
                     >
-                      <span class={[
-                        "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium",
-                        rule_action_classes(rule["action"])
-                      ]}>
-                        {rule["action"]}
-                      </span>
-                      <span class="text-sm">{rule["rule_name"]}</span>
-                      <span class="text-xs text-base-content/40 ml-auto">{rule["rule_type"]}</span>
-                    </div>
+                      {instance.vote}
+                    </span>
+                    <span
+                      :if={instance.confidence}
+                      class="text-xs tabular-nums text-base-content/60"
+                    >
+                      {format_confidence(instance.confidence)}
+                    </span>
                   </div>
                 </div>
-
-                <.detail_row :if={@event.flagged_reason} label="Reason">
-                  <p class="text-sm text-warning">{@event.flagged_reason}</p>
-                </.detail_row>
               </div>
             </div>
 
-            <%!-- Violations Card --%>
-            <div
-              :if={@violations != []}
-              id="violations-section"
-              class="rounded-xl border border-base-300/50 bg-base-100 overflow-hidden"
-            >
-              <div class="px-5 py-3 border-b border-base-300/30">
-                <h2 class="text-sm font-semibold uppercase tracking-wider text-base-content/50">
-                  Policy Violations
-                  <span class="badge badge-sm badge-error ml-2">{length(@violations)}</span>
-                </h2>
+            <%!-- Reasoning --%>
+            <div :if={@session.verdict.reasoning}>
+              <h3 class="text-xs font-medium text-base-content/50 mb-2">Reasoning</h3>
+              <div class="bg-base-200/50 rounded-lg p-4">
+                <p class="text-sm text-base-content/80 whitespace-pre-wrap">
+                  {if @is_ephemeral? and is_nil(@session.verdict.reasoning),
+                    do: "[WIPED]",
+                    else: build_display_reasoning(@session)}
+                </p>
               </div>
-              <div class="divide-y divide-base-300/30">
-                <div :for={v <- @violations} class="p-4 flex items-start gap-4">
-                  <div class={[
-                    "flex items-center justify-center size-8 rounded-lg shrink-0",
-                    violation_severity_bg(v.severity)
+            </div>
+
+            <%!-- Footer: Strategy + Link --%>
+            <div class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-base-300/30">
+              <span
+                :if={@session.verdict.consensus_strategy_used}
+                class="text-xs text-base-content/50"
+              >
+                Strategy:
+                <span class="font-medium">
+                  {format_strategy(@session.verdict.consensus_strategy_used)}
+                </span>
+              </span>
+              <.link
+                navigate={~p"/deliberations/#{@session.id}"}
+                class="inline-flex items-center gap-1 text-sm text-primary hover:underline font-medium"
+              >
+                View Full Deliberation <.icon name="hero-arrow-right" class="size-4" />
+              </.link>
+            </div>
+          </div>
+        </div>
+
+        <%!-- ============================================================ --%>
+        <%!-- SECTION 2: Policy Results (evaluation + violations)          --%>
+        <%!-- ============================================================ --%>
+
+        <%!-- Evaluation Result Card --%>
+        <div
+          :if={@event.evaluation_result != %{}}
+          id="evaluation-result"
+          class="rounded-xl border border-base-300/50 bg-base-100 overflow-hidden"
+        >
+          <div class="px-5 py-3 border-b border-base-300/30">
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-base-content/50">
+              Policy Evaluation
+            </h2>
+          </div>
+          <div class="p-5 space-y-4">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <.eval_stat
+                label="Action"
+                value={@event.evaluation_result["action"] || "-"}
+              />
+              <.eval_stat
+                label="Rules Evaluated"
+                value={@event.evaluation_result["evaluated_count"] || 0}
+              />
+              <.eval_stat
+                label="Blocked"
+                value={@event.evaluation_result["block_count"] || 0}
+              />
+              <.eval_stat
+                label="Flagged"
+                value={@event.evaluation_result["flag_count"] || 0}
+              />
+            </div>
+
+            <%!-- Matched Rules --%>
+            <div :if={matched_rules(@event) != []}>
+              <h3 class="text-xs font-medium text-base-content/50 mb-2">Matched Rules</h3>
+              <div class="space-y-2">
+                <div
+                  :for={rule <- matched_rules(@event)}
+                  class="flex items-center gap-3 rounded-lg bg-base-200/50 px-3 py-2"
+                >
+                  <span class={[
+                    "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium",
+                    rule_action_classes(rule["action"])
                   ]}>
-                    <.icon
-                      name="hero-exclamation-triangle"
-                      class={["size-4", violation_severity_text(v.severity)]}
-                    />
+                    {rule["action"]}
+                  </span>
+                  <span class="text-sm">{rule["rule_name"]}</span>
+                  <span class="text-xs text-base-content/40 ml-auto">{rule["rule_type"]}</span>
+                </div>
+              </div>
+            </div>
+
+            <.detail_row :if={@event.flagged_reason} label="Reason">
+              <p class="text-sm text-warning">{@event.flagged_reason}</p>
+            </.detail_row>
+          </div>
+        </div>
+
+        <%!-- Violations Card --%>
+        <div
+          :if={@violations != []}
+          id="violations-section"
+          class="rounded-xl border border-base-300/50 bg-base-100 overflow-hidden"
+        >
+          <div class="px-5 py-3 border-b border-base-300/30">
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-base-content/50">
+              Policy Violations
+              <span class="badge badge-sm badge-error ml-2">{length(@violations)}</span>
+            </h2>
+          </div>
+          <div class="divide-y divide-base-300/30">
+            <div :for={v <- @violations} class="p-5">
+              <div class="flex items-start gap-4">
+                <div class={[
+                  "flex items-center justify-center size-10 rounded-lg shrink-0",
+                  violation_severity_bg(v.severity)
+                ]}>
+                  <.icon
+                    name="hero-exclamation-triangle"
+                    class={["size-5", violation_severity_text(v.severity)]}
+                  />
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between gap-2">
+                    <h3 class="text-base font-semibold">
+                      {v.details["rule_name"] || "Policy Rule"}
+                    </h3>
+                    <span
+                      :if={v.resolved}
+                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-success/10 text-success"
+                    >
+                      <.icon name="hero-check-circle" class="size-3" /> Resolved
+                    </span>
                   </div>
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-2">
-                      <span class="text-sm font-medium">
-                        {v.details["rule_name"] || "Policy Rule"}
-                      </span>
-                      <span class={[
-                        "inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium",
-                        violation_severity_badge(v.severity)
-                      ]}>
-                        {v.severity}
-                      </span>
+                  <div class="flex flex-wrap items-center gap-2 mt-1.5">
+                    <span class={[
+                      "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium",
+                      violation_severity_badge(v.severity)
+                    ]}>
+                      {v.severity}
+                    </span>
+                    <span class={[
+                      "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium",
+                      violation_action_badge(v.action_taken)
+                    ]}>
+                      {v.action_taken}
+                    </span>
+                    <span
+                      :if={v.details["rule_type"]}
+                      class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-base-200 text-base-content/60"
+                    >
+                      {v.details["rule_type"]}
+                    </span>
+                  </div>
+                  <%!-- Extra details from the details map --%>
+                  <div
+                    :if={violation_extra_details(v.details) != []}
+                    class="mt-2 space-y-1"
+                  >
+                    <div
+                      :for={{key, value} <- violation_extra_details(v.details)}
+                      class="text-xs text-base-content/50"
+                    >
+                      <span class="font-medium">{format_detail_key(key)}:</span>
+                      <span class="ml-1">{to_string(value)}</span>
                     </div>
-                    <p class="text-xs text-base-content/50 mt-0.5">
-                      Action: {v.action_taken} | Type: {v.details["rule_type"] || "-"}
-                    </p>
                   </div>
-                  <span :if={v.resolved} class="badge badge-success badge-sm">Resolved</span>
+                  <p
+                    :if={v.resolved && v.resolved_at}
+                    class="text-xs text-base-content/40 mt-2"
+                  >
+                    Resolved {format_datetime(v.resolved_at)}
+                  </p>
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
-          <%!-- Sidebar: 1 col --%>
-          <div class="space-y-6">
-            <%!-- Deliberation Session Card --%>
-            <div
-              :if={@session}
-              id="linked-session"
-              class="rounded-xl border border-base-300/50 bg-base-100 overflow-hidden"
-            >
-              <div class="px-5 py-3 border-b border-base-300/30 flex items-center gap-2">
-                <.icon name="hero-chat-bubble-left-right" class="size-4 text-primary" />
-                <h2 class="text-sm font-semibold uppercase tracking-wider text-base-content/50">
-                  Deliberation
-                </h2>
-                <.ghost_badge :if={@is_ephemeral?} />
-              </div>
-              <div class="p-5 space-y-3">
-                <.detail_row label="Session">
-                  <.link
-                    navigate={~p"/deliberations/#{@session.id}"}
-                    class="text-sm text-primary hover:underline font-mono"
-                  >
-                    {String.slice(@session.id, 0..7)}...
-                  </.link>
-                </.detail_row>
-                <.detail_row label="Status">
-                  <.session_status_badge status={@session.status} />
-                </.detail_row>
-                <.detail_row label="Trigger">
-                  <span class="text-sm">{@session.trigger || "-"}</span>
-                </.detail_row>
+        <%!-- ============================================================ --%>
+        <%!-- SECTION 3: Event Data (the original input)                   --%>
+        <%!-- ============================================================ --%>
 
-                <%!-- Verdict --%>
-                <div :if={@session.verdict} class="pt-3 border-t border-base-300/30">
-                  <h3 class="text-xs font-medium text-base-content/50 mb-2">Verdict</h3>
-                  <div class="space-y-2">
-                    <div class="flex items-center gap-2">
-                      <span class={[
-                        "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium",
-                        verdict_decision_classes(@session.verdict.decision)
-                      ]}>
-                        {@session.verdict.decision}
-                      </span>
-                      <span :if={@session.verdict.consensus_reached} class="text-xs text-success">
-                        Consensus
-                      </span>
-                    </div>
-                    <p :if={@session.verdict.confidence} class="text-xs text-base-content/50">
-                      Confidence:
-                      <span class="font-medium tabular-nums">
-                        {Float.round(@session.verdict.confidence * 100, 1)}%
-                      </span>
-                    </p>
-                    <p
-                      :if={@session.verdict.reasoning}
-                      class="text-xs text-base-content/70 bg-base-200/50 rounded-lg p-3"
-                    >
-                      {if @is_ephemeral? and is_nil(@session.verdict.reasoning),
-                        do: "[WIPED]",
-                        else: @session.verdict.reasoning}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
+        <%!-- Event Data Card --%>
+        <div
+          id="event-data"
+          class="rounded-xl border border-base-300/50 bg-base-100 overflow-hidden"
+        >
+          <div class="px-5 py-3 border-b border-base-300/30">
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-base-content/50">
+              Event Data
+            </h2>
+          </div>
+          <div class="p-5 space-y-4">
+            <.detail_row label="Type">
+              <.type_badge type={@event.event_type} />
+            </.detail_row>
+            <.detail_row label="Severity">
+              <span class={severity_color(@event.severity)}>
+                {format_severity(@event.severity)}
+              </span>
+            </.detail_row>
+            <.detail_row label="Content">
+              <p class="text-sm whitespace-pre-wrap break-words">{@event.content}</p>
+            </.detail_row>
+            <.detail_row label="Agent">
+              {agent_name(@event)}
+            </.detail_row>
+            <.detail_row :if={@event.source_ip} label="Source IP">
+              <span class="font-mono text-xs">{@event.source_ip}</span>
+            </.detail_row>
+            <.detail_row label="Created">
+              <span class="text-xs tabular-nums">{format_datetime(@event.inserted_at)}</span>
+            </.detail_row>
+            <.detail_row :if={@event.evaluated_at} label="Evaluated">
+              <span class="text-xs tabular-nums">{format_datetime(@event.evaluated_at)}</span>
+            </.detail_row>
+          </div>
+        </div>
 
-            <%!-- No Session Card --%>
-            <div
-              :if={is_nil(@session)}
-              id="no-session"
-              class="rounded-xl border border-base-300/50 bg-base-100 p-5 text-center"
-            >
-              <.icon
-                name="hero-chat-bubble-left-right"
-                class="size-8 text-base-content/20 mx-auto mb-2"
-              />
-              <p class="text-sm text-base-content/50">No deliberation session</p>
-              <p class="text-xs text-base-content/30 mt-1">
-                This event did not trigger a deliberation.
-              </p>
-            </div>
-
-            <%!-- Quick Info Card --%>
-            <div class="rounded-xl border border-base-300/50 bg-base-100 overflow-hidden">
-              <div class="px-5 py-3 border-b border-base-300/30">
-                <h2 class="text-sm font-semibold uppercase tracking-wider text-base-content/50">
-                  Quick Info
-                </h2>
-              </div>
-              <div class="p-5 space-y-3">
-                <.detail_row label="Violations">
-                  <span class="tabular-nums">{length(@violations)}</span>
-                </.detail_row>
-                <.detail_row label="Workspace">
-                  {@current_workspace.name}
-                </.detail_row>
-              </div>
-            </div>
+        <%!-- Payload Card --%>
+        <div
+          :if={@event.payload != %{}}
+          id="event-payload"
+          class="rounded-xl border border-base-300/50 bg-base-100 overflow-hidden"
+        >
+          <div class="px-5 py-3 border-b border-base-300/30">
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-base-content/50">
+              Payload
+            </h2>
+          </div>
+          <div class="p-5">
+            <pre class="text-xs font-mono bg-base-200/50 rounded-lg p-4 overflow-x-auto whitespace-pre-wrap break-words"><code>{format_json(@event.payload)}</code></pre>
           </div>
         </div>
       </div>
@@ -537,4 +697,185 @@ defmodule SwarmshieldWeb.EventShowLive do
   defp violation_severity_badge(:high), do: "bg-error/10 text-error"
   defp violation_severity_badge(:medium), do: "bg-warning/10 text-warning"
   defp violation_severity_badge(_), do: "bg-base-200 text-base-content/50"
+
+  defp violation_action_badge(:blocked), do: "bg-error/10 text-error"
+  defp violation_action_badge(:flagged), do: "bg-warning/10 text-warning"
+  defp violation_action_badge(_), do: "bg-base-200 text-base-content/50"
+
+  @violation_standard_keys ~w(rule_name rule_type)
+  defp violation_extra_details(details) when is_map(details) do
+    details
+    |> Enum.reject(fn {key, _val} -> key in @violation_standard_keys end)
+    |> Enum.sort_by(fn {key, _val} -> key end)
+  end
+
+  defp violation_extra_details(_), do: []
+
+  defp format_detail_key(key) when is_binary(key) do
+    key
+    |> String.replace("_", " ")
+    |> String.split(" ")
+    |> Enum.map_join(" ", &String.capitalize/1)
+  end
+
+  defp format_confidence(confidence) when is_float(confidence) do
+    "#{Float.round(confidence * 100, 1)}%"
+  end
+
+  defp format_confidence(_), do: "-"
+
+  defp format_strategy(strategy) when is_binary(strategy) do
+    strategy
+    |> String.replace("_", " ")
+    |> String.split(" ")
+    |> Enum.map_join(" ", &String.capitalize/1)
+  end
+
+  defp format_strategy(_), do: "-"
+
+  defp vote_breakdown_sorted(breakdown) when is_map(breakdown) do
+    order = %{"block" => 0, "flag" => 1, "allow" => 2}
+
+    breakdown
+    |> Enum.sort_by(fn {key, _count} -> Map.get(order, key, 3) end)
+  end
+
+  defp vote_breakdown_sorted(_), do: []
+
+  defp vote_bar_color("block"), do: "bg-error"
+  defp vote_bar_color("flag"), do: "bg-warning"
+  defp vote_bar_color("allow"), do: "bg-success"
+  defp vote_bar_color(_), do: "bg-base-300"
+
+  defp vote_dot_color("block"), do: "bg-error"
+  defp vote_dot_color("flag"), do: "bg-warning"
+  defp vote_dot_color("allow"), do: "bg-success"
+  defp vote_dot_color(_), do: "bg-base-300"
+
+  defp agent_vote_bg(:block), do: "border-error/30 bg-error/5"
+  defp agent_vote_bg(:flag), do: "border-warning/30 bg-warning/5"
+  defp agent_vote_bg(:allow), do: "border-success/30 bg-success/5"
+  defp agent_vote_bg(_), do: "border-base-300/50 bg-base-200/30"
+
+  defp agent_instances_with_votes(%{agent_instances: instances})
+       when is_list(instances) do
+    Enum.filter(instances, fn instance -> instance.vote != nil end)
+  end
+
+  defp agent_instances_with_votes(_), do: []
+
+  defp agent_instance_name(%{agent_definition: %{name: name}}) when is_binary(name), do: name
+  defp agent_instance_name(%{role: role}) when is_binary(role), do: role
+  defp agent_instance_name(_), do: "Agent"
+
+  defp agent_instance_role(%{agent_definition: %{role: role}}) when is_binary(role), do: role
+  defp agent_instance_role(%{role: role}) when is_binary(role), do: role
+  defp agent_instance_role(_), do: "-"
+
+  # --- Assessment Summary Helpers ---
+
+  defp build_display_reasoning(session) do
+    agents = agent_instances_with_votes(session)
+
+    findings =
+      agents
+      |> Enum.filter(&(&1.status == :completed and not is_nil(&1.initial_assessment)))
+      |> Enum.map(fn agent ->
+        name = agent_instance_name(agent)
+        summary = summarize_assessment(agent.initial_assessment)
+        {name, summary}
+      end)
+      |> Enum.reject(fn {_, s} -> is_nil(s) end)
+
+    case findings do
+      [] ->
+        session.verdict.reasoning
+
+      [{_name, finding}] ->
+        finding
+
+      _ ->
+        findings
+        |> Enum.map_join(". ", fn {name, summary} ->
+          "#{name}: #{summary}"
+        end)
+    end
+  end
+
+  @section_headers ~r/^##?\s+(Summary|Analysis|Overview|Threat Assessment|Assessment|Determination|Event Classification)/im
+
+  defp summarize_assessment(nil), do: nil
+  defp summarize_assessment(""), do: nil
+
+  defp summarize_assessment(text) do
+    (extract_section_content(text) || extract_first_substantive(text))
+    |> strip_markdown()
+    |> truncate_at_sentence(200)
+  end
+
+  defp extract_section_content(text) do
+    case Regex.split(@section_headers, text, parts: 2, include_captures: true) do
+      [_, _header, body] ->
+        body
+        |> String.split(~r/\n##?\s/, parts: 2)
+        |> List.first()
+        |> String.replace(~r/^:\s*/, "")
+        |> String.trim()
+        |> case do
+          "" -> nil
+          content -> content
+        end
+
+      _ ->
+        nil
+    end
+  end
+
+  defp extract_first_substantive(text) do
+    text
+    |> String.split(~r/\n\n+/)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(fn para ->
+      String.starts_with?(para, "#") or
+        String.starts_with?(para, "---") or
+        String.starts_with?(para, "|") or
+        String.starts_with?(para, "VOTE:") or
+        String.match?(para, ~r/^(I need to|Let me)\b/i)
+    end)
+    |> List.first(text)
+  end
+
+  defp strip_markdown(text) do
+    text
+    |> String.replace(~r/\*\*([^*]+)\*\*/, "\\1")
+    |> String.replace(~r/^#+\s+/m, "")
+    |> String.replace(~r/^[-*]\s+/m, "")
+    |> String.replace(~r/^>\s+/m, "")
+    |> String.replace(~r/---+/, "")
+    |> String.replace(~r/\n{2,}/, " ")
+    |> String.replace(~r/\s{2,}/, " ")
+    |> String.trim()
+  end
+
+  defp truncate_at_sentence(text, max_len) when byte_size(text) <= max_len, do: text
+
+  defp truncate_at_sentence(text, max_len) do
+    truncated = String.slice(text, 0, max_len)
+
+    case String.split(truncated, ~r/(?<=[.!?])\s/, trim: true) do
+      [_ | _] = sentences ->
+        sentences
+        |> Enum.reverse()
+        |> tl()
+        |> Enum.reverse()
+        |> Enum.join(" ")
+        |> case do
+          "" -> truncated <> "..."
+          result -> result
+        end
+
+      _ ->
+        truncated <> "..."
+    end
+  end
 end

@@ -107,7 +107,10 @@ defmodule SwarmshieldWeb.EventShowLiveTest do
   end
 
   describe "linked deliberation session" do
-    test "shows linked session with verdict", %{conn: conn, workspace: workspace} do
+    test "shows linked session with verdict in main column", %{
+      conn: conn,
+      workspace: workspace
+    } do
       agent = registered_agent_fixture(%{workspace_id: workspace.id, status: :active})
 
       event =
@@ -133,17 +136,172 @@ defmodule SwarmshieldWeb.EventShowLiveTest do
         decision: :block,
         confidence: 0.92,
         reasoning: "Multiple agents agree this is malicious",
-        consensus_reached: true
+        consensus_reached: true,
+        consensus_strategy_used: "supermajority"
       })
 
       {:ok, view, _html} = live(conn, ~p"/events/#{event.id}")
 
+      # Sidebar still shows compact deliberation card
       assert has_element?(view, "#linked-session")
+
+      # Verdict summary now in main column
+      assert has_element?(view, "#verdict-summary")
+
       html = render(view)
-      assert html =~ "Deliberation"
+      assert html =~ "Final Verdict"
       assert html =~ "block"
       assert html =~ "92.0%"
+      assert html =~ "Consensus"
       assert html =~ "Multiple agents agree this is malicious"
+      assert html =~ "Supermajority"
+      assert html =~ "View Full Deliberation"
+    end
+
+    test "shows vote breakdown bar when votes present", %{conn: conn, workspace: workspace} do
+      agent = registered_agent_fixture(%{workspace_id: workspace.id, status: :active})
+
+      event =
+        agent_event_fixture(%{
+          workspace_id: workspace.id,
+          registered_agent_id: agent.id,
+          content: "Event with vote breakdown",
+          event_type: :action,
+          status: :flagged
+        })
+
+      session =
+        analysis_session_fixture(%{
+          workspace_id: workspace.id,
+          agent_event_id: event.id,
+          status: :completed,
+          trigger: :automatic
+        })
+
+      verdict_fixture(%{
+        workspace_id: workspace.id,
+        analysis_session_id: session.id,
+        decision: :block,
+        confidence: 0.99,
+        reasoning: "Unanimous block decision",
+        consensus_reached: true,
+        vote_breakdown: %{"block" => 3, "flag" => 0, "allow" => 0}
+      })
+
+      {:ok, view, _html} = live(conn, ~p"/events/#{event.id}")
+
+      assert has_element?(view, "#vote-breakdown")
+      html = render(view)
+      assert html =~ "Vote Breakdown"
+      assert html =~ "block"
+    end
+
+    test "shows agent votes grid when agents have voted", %{conn: conn, workspace: workspace} do
+      agent = registered_agent_fixture(%{workspace_id: workspace.id, status: :active})
+
+      event =
+        agent_event_fixture(%{
+          workspace_id: workspace.id,
+          registered_agent_id: agent.id,
+          content: "Event with agent votes",
+          event_type: :action,
+          status: :flagged
+        })
+
+      session =
+        analysis_session_fixture(%{
+          workspace_id: workspace.id,
+          agent_event_id: event.id,
+          status: :completed,
+          trigger: :automatic
+        })
+
+      # Create agent definitions and instances with votes
+      def1 =
+        agent_definition_fixture(%{
+          workspace_id: workspace.id,
+          name: "PII Guardian",
+          role: "pii_detector"
+        })
+
+      def2 =
+        agent_definition_fixture(%{
+          workspace_id: workspace.id,
+          name: "Compliance Officer",
+          role: "compliance_analyst"
+        })
+
+      agent_instance_fixture(%{
+        workspace_id: workspace.id,
+        analysis_session_id: session.id,
+        agent_definition_id: def1.id,
+        status: :completed,
+        vote: :block,
+        confidence: 0.99,
+        role: "pii_detector"
+      })
+
+      agent_instance_fixture(%{
+        workspace_id: workspace.id,
+        analysis_session_id: session.id,
+        agent_definition_id: def2.id,
+        status: :completed,
+        vote: :block,
+        confidence: 0.95,
+        role: "compliance_analyst"
+      })
+
+      verdict_fixture(%{
+        workspace_id: workspace.id,
+        analysis_session_id: session.id,
+        decision: :block,
+        confidence: 0.97,
+        reasoning: "Agents agreed on blocking",
+        consensus_reached: true,
+        vote_breakdown: %{"block" => 2, "flag" => 0, "allow" => 0}
+      })
+
+      {:ok, view, _html} = live(conn, ~p"/events/#{event.id}")
+
+      assert has_element?(view, "#agent-votes")
+      html = render(view)
+      assert html =~ "Agent Votes"
+      assert html =~ "PII Guardian"
+      assert html =~ "Compliance Officer"
+      assert html =~ "99.0%"
+      assert html =~ "95.0%"
+    end
+
+    test "does not show verdict summary when no verdict exists", %{
+      conn: conn,
+      workspace: workspace
+    } do
+      agent = registered_agent_fixture(%{workspace_id: workspace.id, status: :active})
+
+      event =
+        agent_event_fixture(%{
+          workspace_id: workspace.id,
+          registered_agent_id: agent.id,
+          content: "Event with session but no verdict",
+          event_type: :action,
+          status: :flagged
+        })
+
+      # Session without a verdict (still in progress)
+      _session =
+        analysis_session_fixture(%{
+          workspace_id: workspace.id,
+          agent_event_id: event.id,
+          status: :pending,
+          trigger: :automatic
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/events/#{event.id}")
+
+      # Sidebar shows session info
+      assert has_element?(view, "#linked-session")
+      # No verdict summary card
+      refute has_element?(view, "#verdict-summary")
     end
 
     test "shows no-session card when no deliberation linked", %{
@@ -165,6 +323,58 @@ defmodule SwarmshieldWeb.EventShowLiveTest do
 
       assert has_element?(view, "#no-session")
       refute has_element?(view, "#linked-session")
+      refute has_element?(view, "#verdict-summary")
+    end
+  end
+
+  describe "enhanced violations" do
+    test "shows richer violation details with badges", %{conn: conn, workspace: workspace} do
+      agent = registered_agent_fixture(%{workspace_id: workspace.id, status: :active})
+
+      event =
+        agent_event_fixture(%{
+          workspace_id: workspace.id,
+          registered_agent_id: agent.id,
+          content: "Event with violations",
+          event_type: :action,
+          status: :blocked
+        })
+
+      # Create a violation directly via Repo to ensure it's linked
+      alias Swarmshield.Policies.PolicyViolation
+      alias Swarmshield.Repo
+
+      policy_rule =
+        Swarmshield.PoliciesFixtures.policy_rule_fixture(%{workspace_id: workspace.id})
+
+      {:ok, _violation} =
+        %PolicyViolation{
+          workspace_id: workspace.id,
+          agent_event_id: event.id,
+          policy_rule_id: policy_rule.id
+        }
+        |> PolicyViolation.changeset(%{
+          action_taken: :blocked,
+          severity: :critical,
+          details: %{
+            "rule_name" => "Data Exfiltration Detection",
+            "rule_type" => "pattern_match",
+            "matched_pattern" => "password|secret"
+          }
+        })
+        |> Repo.insert()
+
+      {:ok, view, _html} = live(conn, ~p"/events/#{event.id}")
+
+      assert has_element?(view, "#violations-section")
+      html = render(view)
+      assert html =~ "Data Exfiltration Detection"
+      assert html =~ "critical"
+      assert html =~ "blocked"
+      assert html =~ "pattern_match"
+      # Extra detail key should be displayed
+      assert html =~ "Matched Pattern"
+      assert html =~ "password|secret"
     end
   end
 

@@ -257,7 +257,7 @@ defmodule SwarmshieldWeb.DeliberationShowLive do
               </div>
             </div>
             <div :if={instance.initial_assessment} class="text-xs text-base-content/60 mb-3 flex-1">
-              <p class="line-clamp-4">{instance.initial_assessment}</p>
+              <p class="line-clamp-4">{summarize_assessment(instance.initial_assessment)}</p>
             </div>
             <div class="flex items-center justify-between pt-2 border-t border-base-300/30 mt-auto">
               <span
@@ -302,7 +302,7 @@ defmodule SwarmshieldWeb.DeliberationShowLive do
 
           <%!-- Reasoning --%>
           <div class="mb-4">
-            <p class="text-sm text-base-content/70">{@session.verdict.reasoning}</p>
+            <p class="text-sm text-base-content/70">{build_display_reasoning(@session)}</p>
           </div>
 
           <%!-- Per-Agent Vote Summary --%>
@@ -333,7 +333,7 @@ defmodule SwarmshieldWeb.DeliberationShowLive do
                 :if={instance.initial_assessment}
                 class="text-xs text-base-content/60 line-clamp-2"
               >
-                {instance.initial_assessment}
+                {summarize_assessment(instance.initial_assessment)}
               </p>
             </div>
           </div>
@@ -706,4 +706,110 @@ defmodule SwarmshieldWeb.DeliberationShowLive do
   defp agent_icon_color("threat_hunter"), do: "text-error"
   defp agent_icon_color("compliance_auditor"), do: "text-warning"
   defp agent_icon_color(_), do: "text-primary"
+
+  @section_headers ~r/^##?\s+(Summary|Analysis|Overview|Threat Assessment|Assessment|Determination|Event Classification)/im
+
+  defp summarize_assessment(nil), do: nil
+  defp summarize_assessment(""), do: nil
+
+  defp summarize_assessment(text) do
+    (extract_section_content(text) || extract_first_substantive(text))
+    |> strip_markdown()
+    |> truncate_at_sentence(250)
+  end
+
+  defp extract_section_content(text) do
+    case Regex.split(@section_headers, text, parts: 2, include_captures: true) do
+      [_, _header, body] ->
+        body
+        |> String.split(~r/\n##?\s/, parts: 2)
+        |> List.first()
+        |> String.replace(~r/^:\s*/, "")
+        |> String.trim()
+        |> case do
+          "" -> nil
+          content -> content
+        end
+
+      _ ->
+        nil
+    end
+  end
+
+  defp extract_first_substantive(text) do
+    text
+    |> String.split(~r/\n\n+/)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(fn para ->
+      String.starts_with?(para, "#") or
+        String.starts_with?(para, "---") or
+        String.starts_with?(para, "|") or
+        String.starts_with?(para, "VOTE:") or
+        String.match?(para, ~r/^(I need to|Let me)\b/i)
+    end)
+    |> List.first(text)
+  end
+
+  defp strip_markdown(text) do
+    text
+    |> String.replace(~r/\*\*([^*]+)\*\*/, "\\1")
+    |> String.replace(~r/^#+\s+/m, "")
+    |> String.replace(~r/^[-*]\s+/m, "")
+    |> String.replace(~r/^>\s+/m, "")
+    |> String.replace(~r/---+/, "")
+    |> String.replace(~r/\n{2,}/, " ")
+    |> String.replace(~r/\s{2,}/, " ")
+    |> String.trim()
+  end
+
+  defp truncate_at_sentence(text, max_len) when byte_size(text) <= max_len, do: text
+
+  defp truncate_at_sentence(text, max_len) do
+    truncated = String.slice(text, 0, max_len)
+
+    case String.split(truncated, ~r/(?<=[.!?])\s/, trim: true) do
+      [_ | _] = sentences ->
+        sentences
+        |> Enum.reverse()
+        |> tl()
+        |> Enum.reverse()
+        |> Enum.join(" ")
+        |> case do
+          "" -> truncated <> "..."
+          result -> result
+        end
+
+      _ ->
+        truncated <> "..."
+    end
+  end
+
+  defp build_display_reasoning(session) do
+    session
+    |> voted_agents()
+    |> extract_findings()
+    |> format_reasoning(session.verdict.reasoning)
+  end
+
+  defp voted_agents(%{agent_instances: instances}) when is_list(instances),
+    do: Enum.filter(instances, &(&1.vote != nil))
+
+  defp voted_agents(_session), do: []
+
+  defp extract_findings(agents) do
+    agents
+    |> Enum.filter(&(&1.status == :completed and not is_nil(&1.initial_assessment)))
+    |> Enum.map(&{agent_display_name(&1), summarize_assessment(&1.initial_assessment)})
+    |> Enum.reject(fn {_, s} -> is_nil(s) end)
+  end
+
+  defp agent_display_name(%{agent_definition: %{name: n}}) when is_binary(n), do: n
+  defp agent_display_name(%{role: r}) when is_binary(r), do: r
+  defp agent_display_name(_), do: "Agent"
+
+  defp format_reasoning([], fallback), do: fallback
+  defp format_reasoning([{_name, finding}], _fallback), do: finding
+
+  defp format_reasoning(findings, _fallback),
+    do: Enum.map_join(findings, ". ", fn {name, summary} -> "#{name}: #{summary}" end)
 end

@@ -117,8 +117,15 @@ defmodule Swarmshield.Deliberation do
     |> where([s], s.agent_event_id == ^event_id)
     |> Repo.one()
     |> case do
-      nil -> nil
-      session -> Repo.preload(session, [:verdict, workflow: :ghost_protocol_config])
+      nil ->
+        nil
+
+      session ->
+        Repo.preload(session, [
+          :verdict,
+          workflow: :ghost_protocol_config,
+          agent_instances: :agent_definition
+        ])
     end
   end
 

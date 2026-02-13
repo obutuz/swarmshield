@@ -8,10 +8,12 @@ defmodule Swarmshield.Policies.PolicyEngine do
   The evaluation flow:
   1. Load cached rules for the workspace
   2. Filter rules by applicability (event type, agent type)
-  3. Evaluate rules in priority order (highest first)
-  4. Short-circuit on first :block match
-  5. Collect all :flag matches
-  6. Return :allow if no rules match
+  3. Evaluate ALL rules in priority order (highest first)
+  4. Collect every match (both :block and :flag)
+  5. Final action is the most severe: :block > :flag > :allow
+
+  All matching rules are reported for full audit visibility. The final action
+  is determined by the most severe match found across all evaluated rules.
 
   Returns: `{action, matched_rules, details_map}`
   """
@@ -104,48 +106,42 @@ defmodule Swarmshield.Policies.PolicyEngine do
   defp applies_to_agent_type?(_rule, _event), do: true
 
   # ---------------------------------------------------------------------------
-  # Rule evaluation - priority order, short-circuit on block
+  # Rule evaluation - priority order, evaluate ALL rules for full visibility
   # ---------------------------------------------------------------------------
 
   defp evaluate_rules(rules, event, workspace_id) do
-    # Rules are already ordered by priority DESC from PolicyCache
-    initial_state = {:allow, [], %{evaluated_count: 0, block_count: 0, flag_count: 0}}
+    # Rules are already ordered by priority DESC from PolicyCache.
+    # We evaluate every rule to collect all violations for audit visibility.
+    # The final action is the most severe: block > flag > allow.
+    initial_state = {[], %{evaluated_count: 0, block_count: 0, flag_count: 0}}
 
-    Enum.reduce_while(rules, initial_state, fn rule, acc ->
-      process_rule_result(rule, acc, event, workspace_id)
-    end)
-    |> then(fn {action, matched, counts} ->
-      {action, Enum.reverse(matched), counts}
-    end)
+    {matched, counts} =
+      Enum.reduce(rules, initial_state, fn rule, {matched, counts} ->
+        counts = %{counts | evaluated_count: counts.evaluated_count + 1}
+
+        case evaluate_single_rule(rule, event, workspace_id) do
+          {:violation, rule_match} ->
+            counts = increment_violation_count(rule, counts)
+            {[rule_match | matched], counts}
+
+          :no_violation ->
+            {matched, counts}
+        end
+      end)
+
+    action = resolve_action(counts)
+    {action, Enum.reverse(matched), counts}
   end
 
-  defp process_rule_result(rule, {_current_action, matched, counts}, event, workspace_id) do
-    counts = %{counts | evaluated_count: counts.evaluated_count + 1}
+  defp increment_violation_count(%{action: :block}, counts),
+    do: %{counts | block_count: counts.block_count + 1}
 
-    case evaluate_single_rule(rule, event, workspace_id) do
-      {:violation, rule_match} ->
-        handle_violation(rule, rule_match, matched, counts)
+  defp increment_violation_count(_rule, counts),
+    do: %{counts | flag_count: counts.flag_count + 1}
 
-      :no_violation ->
-        current_action = if counts.flag_count > 0, do: :flag, else: :allow
-        {:cont, {current_action, matched, counts}}
-    end
-  end
-
-  defp handle_violation(%{action: :block} = _rule, rule_match, matched, counts) do
-    counts = %{counts | block_count: counts.block_count + 1}
-    {:halt, {:block, Enum.reverse([rule_match | matched]), counts}}
-  end
-
-  defp handle_violation(%{action: :flag} = _rule, rule_match, matched, counts) do
-    counts = %{counts | flag_count: counts.flag_count + 1}
-    {:cont, {:flag, [rule_match | matched], counts}}
-  end
-
-  defp handle_violation(_rule, rule_match, matched, counts) do
-    counts = %{counts | flag_count: counts.flag_count + 1}
-    {:cont, {:flag, [rule_match | matched], counts}}
-  end
+  defp resolve_action(%{block_count: bc}) when bc > 0, do: :block
+  defp resolve_action(%{flag_count: fc}) when fc > 0, do: :flag
+  defp resolve_action(_counts), do: :allow
 
   defp evaluate_single_rule(rule, event, workspace_id) do
     rule_match = %{
