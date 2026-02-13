@@ -105,27 +105,25 @@ defmodule Swarmshield.Deliberation.Session do
 
   @impl true
   def handle_continue(:start_analysis, state) do
-    try do
-      state = run_analysis_phase(state)
+    state = run_analysis_phase(state)
 
-      case state.phase do
-        :failed ->
-          {:stop, :normal, state}
-
-        :analyzing_complete ->
-          state = run_deliberation_phase(state)
-          state = run_verdict_phase(state)
-          maybe_wipe_and_stop(state)
-      end
-    catch
-      kind, reason ->
-        message = format_catch_message(kind, reason, __STACKTRACE__)
-
-        Logger.error("[Session] Unhandled #{kind} in session #{state.session_id}: #{message}")
-
-        state = fail_session(state, state.session, "Unhandled #{kind}: #{message}")
+    case state.phase do
+      :failed ->
         {:stop, :normal, state}
+
+      :analyzing_complete ->
+        state = run_deliberation_phase(state)
+        state = run_verdict_phase(state)
+        maybe_wipe_and_stop(state)
     end
+  catch
+    kind, reason ->
+      message = format_catch_message(kind, reason, __STACKTRACE__)
+
+      Logger.error("[Session] Unhandled #{kind} in session #{state.session_id}: #{message}")
+
+      state = fail_session(state, state.session, "Unhandled #{kind}: #{message}")
+      {:stop, :normal, state}
   end
 
   @impl true

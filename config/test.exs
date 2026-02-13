@@ -14,7 +14,9 @@ config :swarmshield, Swarmshield.Repo,
   hostname: "localhost",
   database: "swarmshield_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: System.schedulers_online() * 2
+  pool_size: max(System.schedulers_online() * 4, 64),
+  queue_target: 5000,
+  queue_interval: 10_000
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
