@@ -87,16 +87,9 @@ psql -U postgres -c "ALTER USER postgres PASSWORD 'postgres';"
 
 ### 3. Anthropic API Key
 
-SwarmShield uses Claude Opus 4.6 for multi-agent deliberation. You need an API key:
+SwarmShield uses Claude Opus 4.6 for multi-agent deliberation. You need an API key from [console.anthropic.com](https://console.anthropic.com/).
 
-1. Get one at [console.anthropic.com](https://console.anthropic.com/)
-2. Export it in your shell:
-
-```bash
-export ANTHROPIC_API_KEY=sk-ant-your-key-here
-```
-
-Add this to your `~/.bashrc`, `~/.zshrc`, or shell profile so it persists.
+You'll enter it through the app itself after logging in — no environment variables needed. See the **Configure API Key** section below.
 
 > **Note:** The app runs without an API key — you can browse the dashboard, events, and admin pages. Deliberations just won't trigger without it.
 
@@ -136,6 +129,18 @@ SwarmShield uses **magic link authentication** (no passwords). A demo account is
 You're now logged in as a **super_admin** with full access to all features.
 
 > **How `/dev/mailbox` works:** In development, emails aren't sent externally. Phoenix captures them in an in-memory inbox you can view at `/dev/mailbox`. This is where your magic link appears. This route only exists in dev mode.
+
+---
+
+## Configure API Key
+
+Once logged in, add your Anthropic API key so deliberations can run:
+
+1. Go to [/admin/settings](http://localhost:4000/admin/settings)
+2. Paste your Anthropic API key (`sk-ant-...`)
+3. Click Save
+
+That's it — deliberations will now use Claude Opus 4.6.
 
 ---
 
