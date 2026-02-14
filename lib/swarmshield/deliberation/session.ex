@@ -436,7 +436,7 @@ defmodule Swarmshield.Deliberation.Session do
     dissenting = build_dissenting(agents, decision, consensus_result)
     vote_breakdown = Consensus.vote_breakdown(votes) |> stringify_keys()
 
-    reasoning = build_reasoning(consensus_result, decision, details)
+    reasoning = build_reasoning(consensus_result, decision, details, vote_breakdown)
 
     final_decision =
       case consensus_result do
@@ -781,15 +781,15 @@ defmodule Swarmshield.Deliberation.Session do
 
   defp build_dissenting(_agents, _decision, :no_consensus), do: []
 
-  defp build_reasoning(:consensus, decision, details) do
+  defp build_reasoning(:consensus, decision, details, vote_breakdown) do
     "Consensus reached via #{Map.get(details, :strategy, "majority")} strategy. " <>
       "Decision: #{decision}. " <>
-      "Vote count: #{format_vote_breakdown(Map.get(details, :vote_breakdown, %{}))}."
+      "Vote count: #{format_vote_breakdown(vote_breakdown)}."
   end
 
-  defp build_reasoning(:no_consensus, _decision, details) do
+  defp build_reasoning(:no_consensus, _decision, _details, vote_breakdown) do
     "No consensus reached. Escalating for manual review. " <>
-      "Vote breakdown: #{format_vote_breakdown(Map.get(details, :vote_breakdown, %{}))}."
+      "Vote breakdown: #{format_vote_breakdown(vote_breakdown)}."
   end
 
   defp format_vote_breakdown(breakdown) when map_size(breakdown) == 0, do: "none"

@@ -25,11 +25,223 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/swarmshield"
 import topbar from "../vendor/topbar"
 
+// ============================================================
+// GhostProtocol Shred Effect — Canvas Particle Disintegration
+// ============================================================
+const ShredEffect = {
+  mounted() {
+    this.handleEvent("trigger-shred", () => this.runDisintegration())
+  },
+
+  runDisintegration() {
+    const container = this.el
+    const shreddables = Array.from(container.querySelectorAll("[data-shreddable]"))
+    const survivors = container.querySelectorAll("[data-surviving]")
+    if (!shreddables.length) return
+
+    // Restore from previous run
+    shreddables.forEach(el => {
+      el.style.opacity = "1"
+      el.style.visibility = "visible"
+    })
+    container.querySelectorAll(".shred-stamp").forEach(el => el.remove())
+    const oldCanvas = document.getElementById("shred-canvas")
+    if (oldCanvas) oldCanvas.remove()
+
+    // Create full-screen canvas
+    const canvas = document.createElement("canvas")
+    canvas.id = "shred-canvas"
+    canvas.style.cssText = "position:fixed;inset:0;z-index:100;pointer-events:none;"
+    const dpr = window.devicePixelRatio || 1
+    canvas.width = window.innerWidth * dpr
+    canvas.height = window.innerHeight * dpr
+    canvas.style.width = window.innerWidth + "px"
+    canvas.style.height = window.innerHeight + "px"
+    document.body.appendChild(canvas)
+    const ctx = canvas.getContext("2d")
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+
+    // Detect theme
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark"
+
+    // Build particles from each shreddable element
+    const allParticles = []
+    const PARTICLE_SIZE = 3
+
+    shreddables.forEach((el, elIdx) => {
+      const rect = el.getBoundingClientRect()
+      const style = window.getComputedStyle(el)
+      let bgColor = style.backgroundColor
+      if (bgColor === "rgba(0, 0, 0, 0)") bgColor = isDark ? "#1e1e2e" : "#fafafa"
+
+      // Parse bg color for particle tinting
+      const rgb = parseRGB(bgColor)
+      const cols = Math.ceil(rect.width / PARTICLE_SIZE)
+      const rows = Math.ceil(rect.height / PARTICLE_SIZE)
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          // Only create ~40% of particles for performance + organic look
+          if (Math.random() > 0.4) continue
+
+          const px = rect.left + c * PARTICLE_SIZE + Math.random() * PARTICLE_SIZE
+          const py = rect.top + r * PARTICLE_SIZE + Math.random() * PARTICLE_SIZE
+
+          // Distance from right edge drives disintegration wave (right to left)
+          const normalizedX = c / cols
+          const delay = normalizedX * 1.2 + Math.random() * 0.4 + elIdx * 0.15
+
+          // Tint particles — mix element color with red/orange for destruction feel
+          const tint = Math.random()
+          const pr = Math.min(255, rgb.r + Math.floor(tint * 80))
+          const pg = Math.max(0, rgb.g - Math.floor(tint * 40))
+          const pb = Math.max(0, rgb.b - Math.floor(tint * 60))
+
+          allParticles.push({
+            x: px, y: py,
+            originX: px, originY: py,
+            size: PARTICLE_SIZE * (0.5 + Math.random() * 1.0),
+            r: pr, g: pg, b: pb,
+            vx: (Math.random() - 0.3) * 3,
+            vy: -1 - Math.random() * 4,
+            gravity: 0.02 + Math.random() * 0.03,
+            drag: 0.97 + Math.random() * 0.02,
+            rotSpeed: (Math.random() - 0.5) * 0.3,
+            rotation: 0,
+            alpha: 1,
+            fadeRate: 0.008 + Math.random() * 0.012,
+            delay: delay,
+            active: false,
+            wind: (Math.random() - 0.5) * 0.5
+          })
+        }
+      }
+    })
+
+    // Animation loop
+    let elapsed = 0
+    let lastTime = performance.now()
+    let running = true
+    const TOTAL_DURATION = 5000
+
+    // Phase 1: Glitch (0-800ms)
+    shreddables.forEach(el => el.classList.add("shred-glitch"))
+
+    // Phase 2: Start dissolving elements (800ms)
+    setTimeout(() => {
+      shreddables.forEach(el => {
+        el.style.transition = "opacity 1.5s ease-out"
+        el.style.opacity = "0"
+      })
+      survivors.forEach(el => el.classList.add("elevated"))
+    }, 800)
+
+    // Phase 3: Stamp appears (2200ms)
+    setTimeout(() => {
+      const stamp = document.createElement("div")
+      stamp.className = "shred-stamp"
+      stamp.textContent = "DATA DESTROYED"
+      container.style.position = "relative"
+      container.appendChild(stamp)
+    }, 2200)
+
+    function animate(now) {
+      if (!running) return
+      const dt = Math.min(now - lastTime, 50) // cap delta
+      lastTime = now
+      elapsed += dt
+
+      const seconds = elapsed / 1000
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight)
+
+      let aliveCount = 0
+
+      for (const p of allParticles) {
+        if (seconds < p.delay) continue
+        if (p.alpha <= 0) continue
+
+        if (!p.active) {
+          p.active = true
+          // Initial burst velocity away from origin
+          const burstAngle = Math.random() * Math.PI * 2
+          const burstForce = 1 + Math.random() * 2.5
+          p.vx += Math.cos(burstAngle) * burstForce
+          p.vy += Math.sin(burstAngle) * burstForce - 2
+        }
+
+        aliveCount++
+
+        // Physics
+        p.vy += p.gravity
+        p.vx += p.wind * 0.01
+        p.vx *= p.drag
+        p.vy *= p.drag
+        p.x += p.vx
+        p.y += p.vy
+        p.rotation += p.rotSpeed
+        p.alpha -= p.fadeRate
+
+        if (p.alpha <= 0) { p.alpha = 0; continue }
+
+        // Draw particle
+        ctx.save()
+        ctx.translate(p.x, p.y)
+        ctx.rotate(p.rotation)
+        ctx.globalAlpha = p.alpha
+        ctx.fillStyle = `rgb(${p.r},${p.g},${p.b})`
+        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size)
+
+        // Ember glow for some particles
+        if (p.alpha > 0.3 && Math.random() > 0.7) {
+          ctx.globalAlpha = p.alpha * 0.3
+          ctx.shadowColor = `rgba(255, 80, 30, ${p.alpha * 0.5})`
+          ctx.shadowBlur = 8
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size)
+          ctx.shadowBlur = 0
+        }
+
+        ctx.restore()
+      }
+
+      if (elapsed < TOTAL_DURATION && aliveCount > 0) {
+        requestAnimationFrame(animate)
+      } else {
+        // Cleanup
+        running = false
+        canvas.style.transition = "opacity 0.5s"
+        canvas.style.opacity = "0"
+        setTimeout(() => {
+          canvas.remove()
+          shreddables.forEach(el => el.classList.remove("shred-glitch"))
+          const stampEl = container.querySelector(".shred-stamp")
+          if (stampEl) {
+            stampEl.style.transition = "opacity 1s ease-out"
+            stampEl.style.opacity = "0"
+            setTimeout(() => stampEl.remove(), 1000)
+          }
+          survivors.forEach(el => el.classList.remove("elevated"))
+        }, 500)
+      }
+    }
+
+    // Start particle animation after glitch phase
+    setTimeout(() => requestAnimationFrame(animate), 600)
+  }
+}
+
+function parseRGB(color) {
+  const match = color.match(/\d+/g)
+  if (match && match.length >= 3) {
+    return { r: parseInt(match[0]), g: parseInt(match[1]), b: parseInt(match[2]) }
+  }
+  return { r: 30, g: 30, b: 50 } // fallback dark
+}
+
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks},
+  hooks: {...colocatedHooks, ShredEffect},
 })
 
 // Show progress bar on live navigation and form submits

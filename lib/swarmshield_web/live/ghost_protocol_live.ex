@@ -239,7 +239,7 @@ defmodule SwarmshieldWeb.GhostProtocolLive do
                     </div>
                     <div class="min-w-0">
                       <.link
-                        navigate={~p"/deliberations/#{session.id}"}
+                        navigate={~p"/ghost-protocol/#{session.id}"}
                         class="text-sm font-medium hover:text-primary transition-colors truncate block"
                       >
                         {workflow_name(session)}

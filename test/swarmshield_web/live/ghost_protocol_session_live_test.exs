@@ -194,7 +194,9 @@ defmodule SwarmshieldWeb.GhostProtocolSessionLiveTest do
           decision: :block,
           confidence: 0.95,
           reasoning: "Multiple threat indicators detected",
-          consensus_reached: true
+          consensus_reached: true,
+          consensus_strategy_used: "supermajority",
+          vote_breakdown: %{"block" => 3, "allow" => 0, "flag" => 0}
         })
 
       {:ok, view, html} = live(conn, ~p"/ghost-protocol/#{session.id}")
@@ -203,7 +205,8 @@ defmodule SwarmshieldWeb.GhostProtocolSessionLiveTest do
       assert html =~ "Surviving Artifact: Verdict"
       assert html =~ "Block"
       assert html =~ "95.0%"
-      assert html =~ "Multiple threat indicators detected"
+      assert html =~ "supermajority strategy"
+      assert html =~ "block"
       assert html =~ "Consensus"
     end
 

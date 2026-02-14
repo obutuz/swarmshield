@@ -51,7 +51,12 @@ defmodule SwarmshieldWeb.GhostProtocolSessionLive do
   end
 
   def handle_info({:wipe_completed, _session_id}, socket) do
-    {:noreply, reload_session(socket)}
+    socket =
+      socket
+      |> push_event("trigger-shred", %{})
+      |> reload_session()
+
+    {:noreply, socket}
   end
 
   def handle_info({:message_created, _message_id, _type}, socket) do
@@ -59,6 +64,11 @@ defmodule SwarmshieldWeb.GhostProtocolSessionLive do
   end
 
   def handle_info(_msg, socket), do: {:noreply, socket}
+
+  @impl true
+  def handle_event("replay-shred", _params, socket) do
+    {:noreply, push_event(socket, "trigger-shred", %{})}
+  end
 
   # -------------------------------------------------------------------
   # Private
@@ -131,7 +141,7 @@ defmodule SwarmshieldWeb.GhostProtocolSessionLive do
       user_permissions={@user_permissions}
       active_nav={:ghost_protocol}
     >
-      <div class="space-y-6">
+      <div id="gp-session-shred" phx-hook="ShredEffect" class="space-y-6">
         <%!-- Back link + Header --%>
         <div id="gp-session-header">
           <.link
@@ -151,12 +161,25 @@ defmodule SwarmshieldWeb.GhostProtocolSessionLive do
                 {String.slice(@session.id, 0, 8)}...
               </p>
             </div>
-            <.session_status_badge status={@session.status} />
+            <div class="flex items-center gap-3">
+              <button
+                :if={@session.status in [:completed, :failed, :timed_out]}
+                phx-click="replay-shred"
+                class="btn btn-outline btn-error btn-sm gap-1.5"
+              >
+                <.icon name="hero-trash" class="size-3.5" /> Replay Shred
+              </button>
+              <.session_status_badge status={@session.status} />
+            </div>
           </div>
         </div>
 
         <%!-- Lifecycle Timeline --%>
-        <div id="lifecycle-timeline" class="rounded-xl border border-secondary/30 bg-secondary/5 p-4">
+        <div
+          id="lifecycle-timeline"
+          data-shreddable
+          class="rounded-xl border border-secondary/30 bg-secondary/5 p-4"
+        >
           <h3 class="text-sm font-medium text-secondary mb-4">
             <.icon name="hero-arrow-right-circle" class="size-4 inline-block mr-1" />
             Session Lifecycle
@@ -190,7 +213,7 @@ defmodule SwarmshieldWeb.GhostProtocolSessionLive do
           <%!-- Main Column --%>
           <div class="lg:col-span-2 space-y-6">
             <%!-- Info Cards --%>
-            <div id="session-info" class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div id="session-info" data-shreddable class="grid grid-cols-2 sm:grid-cols-3 gap-4">
               <div class="rounded-xl border border-base-300/50 bg-base-100 p-4">
                 <p class="text-xs font-medium text-base-content/40 uppercase tracking-wider">
                   Started
@@ -223,7 +246,7 @@ defmodule SwarmshieldWeb.GhostProtocolSessionLive do
             </div>
 
             <%!-- Agent Status Cards --%>
-            <div id="agent-cards">
+            <div id="agent-cards" data-shreddable>
               <h3 class="text-sm font-medium text-base-content/50 mb-3">
                 <.icon name="hero-user-group" class="size-4 inline-block mr-1" />
                 Agent Instances ({length(@session.agent_instances)})
@@ -296,7 +319,8 @@ defmodule SwarmshieldWeb.GhostProtocolSessionLive do
             <div
               :if={@session.verdict}
               id="surviving-verdict"
-              class="rounded-xl border-2 border-success/40 bg-success/5 p-4"
+              data-surviving
+              class="rounded-xl border-2 border-success/40 bg-success/5 p-4 shred-surviving"
             >
               <h3 class="text-sm font-medium text-success mb-3">
                 <.icon name="hero-shield-check" class="size-4 inline-block mr-1" />
@@ -309,7 +333,30 @@ defmodule SwarmshieldWeb.GhostProtocolSessionLive do
                     {Float.round(@session.verdict.confidence * 100, 1)}%
                   </span>
                 </div>
-                <p class="text-xs text-base-content/60">{@session.verdict.reasoning}</p>
+                <p class="text-xs text-base-content/60">
+                  Consensus reached via {String.replace(
+                    @session.verdict.consensus_strategy_used || "majority",
+                    "_",
+                    " "
+                  )} strategy.
+                </p>
+                <%!-- Vote Breakdown from verdict record --%>
+                <div
+                  :if={@session.verdict.vote_breakdown != %{}}
+                  class="flex flex-wrap gap-3"
+                >
+                  <div
+                    :for={
+                      {vote_type, count} <- vote_breakdown_sorted(@session.verdict.vote_breakdown)
+                    }
+                    :if={count > 0}
+                    class="flex items-center gap-1.5 text-xs text-base-content/60"
+                  >
+                    <span class={["size-2 rounded-full", vote_dot_color(vote_type)]} />
+                    <span class="capitalize">{vote_type}:</span>
+                    <span class="font-medium tabular-nums">{count}</span>
+                  </div>
+                </div>
                 <div :if={@session.verdict.consensus_reached}>
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-success/10 text-success">
                     <.icon name="hero-check-circle" class="size-3" /> Consensus
@@ -328,7 +375,11 @@ defmodule SwarmshieldWeb.GhostProtocolSessionLive do
             </div>
 
             <%!-- Config Details --%>
-            <div id="config-details" class="rounded-xl border border-secondary/30 bg-secondary/5 p-4">
+            <div
+              id="config-details"
+              data-shreddable
+              class="rounded-xl border border-secondary/30 bg-secondary/5 p-4"
+            >
               <h3 class="text-sm font-medium text-secondary mb-3">
                 <.icon name="hero-cog-6-tooth" class="size-4 inline-block mr-1" />
                 GhostProtocol Config
@@ -557,6 +608,18 @@ defmodule SwarmshieldWeb.GhostProtocolSessionLive do
   defp vote_color(:flag), do: "text-warning"
   defp vote_color(:block), do: "text-error"
   defp vote_color(_), do: "text-base-content/60"
+
+  defp vote_breakdown_sorted(breakdown) when is_map(breakdown) do
+    order = %{"block" => 0, "flag" => 1, "allow" => 2}
+    Enum.sort_by(breakdown, fn {key, _count} -> Map.get(order, key, 3) end)
+  end
+
+  defp vote_breakdown_sorted(_), do: []
+
+  defp vote_dot_color("block"), do: "bg-error"
+  defp vote_dot_color("flag"), do: "bg-warning"
+  defp vote_dot_color("allow"), do: "bg-success"
+  defp vote_dot_color(_), do: "bg-base-300"
 
   defp expired?(nil), do: false
 
