@@ -88,6 +88,60 @@ workspace =
 
 workspace_id = workspace.id
 
+# --- Seed demo user (demo@hackathon.com) with super_admin role ---
+
+alias Swarmshield.Accounts.{User, UserWorkspaceRole, Role}
+
+demo_email = "demo@hackathon.com"
+
+demo_user =
+  case Repo.one(from(u in User, where: u.email == ^demo_email, limit: 1)) do
+    nil ->
+      {:ok, user} =
+        %User{}
+        |> User.email_changeset(%{email: demo_email})
+        |> Ecto.Changeset.change(%{
+          confirmed_at: DateTime.utc_now(:second),
+          is_system_owner: true
+        })
+        |> Repo.insert()
+
+      IO.puts("[Demo] Created demo user: #{user.email} (system owner)")
+      user
+
+    user ->
+      IO.puts("[Demo] Demo user exists: #{user.email}")
+      user
+  end
+
+# Assign super_admin role to demo user for this workspace
+super_admin_role = Repo.one!(from(r in Role, where: r.name == "super_admin", limit: 1))
+
+existing_uwr =
+  Repo.one(
+    from(uwr in UserWorkspaceRole,
+      where: uwr.user_id == ^demo_user.id and uwr.workspace_id == ^workspace_id,
+      limit: 1
+    )
+  )
+
+case existing_uwr do
+  nil ->
+    {:ok, _uwr} =
+      %UserWorkspaceRole{}
+      |> UserWorkspaceRole.changeset(%{
+        user_id: demo_user.id,
+        workspace_id: workspace_id,
+        role_id: super_admin_role.id
+      })
+      |> Repo.insert()
+
+    IO.puts("[Demo] Assigned super_admin role to #{demo_email} in workspace")
+
+  _uwr ->
+    IO.puts("[Demo] #{demo_email} already has role in workspace")
+end
+
 # --- Seed demo scenarios into workspace settings (database-driven) ---
 
 demo_scenarios = [
