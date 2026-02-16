@@ -5,7 +5,12 @@
 SwarmShield intercepts every action AI agents take in real time. A sub-millisecond policy engine catches threats instantly. Flagged events trigger a swarm of five Claude Opus 4.6 agents — Security Analyst, Ethics Reviewer, Threat Hunter, Compliance Auditor, PII Guardian — that analyze in parallel, debate, and vote on a verdict. GhostProtocol destroys all session data after the verdict, leaving only the decision behind.
 
 Built on Elixir/OTP — the same runtime that powers WhatsApp for 2 billion users. Each deliberation runs as an isolated lightweight process. Built entirely with Claude Code.
-
+---
+Login credentials for judges: 
+- URL: https://swarmshield-production.up.railway.app/users/log-in 
+- Email: demo@hackathon.com 
+- Password: SwarmShield2025! 
+- Use the bottom form (email + password), not the magic link one
 ---
 
 ## Prerequisites
