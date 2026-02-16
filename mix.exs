@@ -91,6 +91,7 @@ defmodule Swarmshield.MixProject do
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": ["compile", "tailwind swarmshield", "esbuild swarmshield"],
       "assets.deploy": [
+        "compile",
         "tailwind swarmshield --minify",
         "esbuild swarmshield --minify",
         "phx.digest"
