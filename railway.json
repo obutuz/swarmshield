@@ -14,7 +14,7 @@
     ]
   },
   "deploy": {
-    "startCommand": "/app/_build/prod/rel/swarmshield/bin/swarmshield eval \"Swarmshield.Release.migrate()\" && /app/_build/prod/rel/swarmshield/bin/swarmshield start",
+    "startCommand": "/app/_build/prod/rel/swarmshield/bin/swarmshield eval \"Swarmshield.Release.migrate()\" && /app/_build/prod/rel/swarmshield/bin/swarmshield eval \"Swarmshield.Release.seed()\" && /app/_build/prod/rel/swarmshield/bin/swarmshield start",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
   }

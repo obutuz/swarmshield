@@ -94,23 +94,32 @@ alias Swarmshield.Accounts.{User, UserWorkspaceRole, Role}
 
 demo_email = "demo@hackathon.com"
 
+demo_password = "SwarmShield2025!"
+
 demo_user =
   case Repo.one(from(u in User, where: u.email == ^demo_email, limit: 1)) do
     nil ->
       {:ok, user} =
         %User{}
         |> User.email_changeset(%{email: demo_email})
+        |> User.password_changeset(%{password: demo_password})
         |> Ecto.Changeset.change(%{
           confirmed_at: DateTime.utc_now(:second),
           is_system_owner: true
         })
         |> Repo.insert()
 
-      IO.puts("[Demo] Created demo user: #{user.email} (system owner)")
+      IO.puts("[Demo] Created demo user: #{user.email} / #{demo_password} (system owner)")
       user
 
     user ->
-      IO.puts("[Demo] Demo user exists: #{user.email}")
+      # Ensure password is set on existing user
+      {:ok, user} =
+        user
+        |> User.password_changeset(%{password: demo_password})
+        |> Repo.update()
+
+      IO.puts("[Demo] Demo user exists: #{user.email} - password set to #{demo_password}")
       user
   end
 
