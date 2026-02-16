@@ -1,0 +1,21 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "RAILPACK",
+    "watchPatterns": [
+      "mix.exs",
+      "mix.lock",
+      "lib/**",
+      "priv/**",
+      "config/**",
+      "assets/css/**",
+      "assets/js/**",
+      "assets/vendor/**"
+    ]
+  },
+  "deploy": {
+    "startCommand": "/app/_build/prod/rel/swarmshield/bin/swarmshield eval \"Swarmshield.Release.migrate()\" && /app/_build/prod/rel/swarmshield/bin/swarmshield start",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  }
+}
